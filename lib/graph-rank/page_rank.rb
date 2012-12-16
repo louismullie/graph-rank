@@ -16,12 +16,12 @@ class GraphRank::PageRank
   end
 
   # Add a node to the graph.
-  def add(source, dest, weight=1)
+  def add(source, dest, weight=1.0)
     return false if source == dest
-    @outlinks[source] ||= 0
+    @outlinks[source] ||= 0.0
     @graph[dest] ||= []
     @graph[dest] << source
-    @outlinks[source] += 1
+    @outlinks[source] += 1.0
     @nodes[source] = 0.15
     @nodes[dest] = 0.15
     @weights[source] ||= {}
@@ -62,7 +62,7 @@ class GraphRank::PageRank
     @nodes.each do |k,v|
       diff[k] = current[k] - @nodes[k]
     end
-    total = 0
+    total = 0.0
     diff.each { |k,v| total += diff[k] * v }
     Math.sqrt(total/current.size) < @convergence
   end
