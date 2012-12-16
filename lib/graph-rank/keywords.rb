@@ -4,13 +4,21 @@ class GraphRank::Keywords < GraphRank::TextRank
 
   # Split the text on words.
   def get_features
-    @text.split(' ')
+    clean_text
+    @features = @text.split(' ')
   end
 
   # Remove short and stop words.
   def filter_features
     remove_short_words
     remove_stop_words
+  end
+
+  # Clean text leaving just letters from a-z.
+  def clean_text
+    @text.downcase!
+    @text.gsub!(/[^a-z ]/, ' ')
+    @text.gsub!(/\s+/, " ")
   end
 
   # Remove all stop words.

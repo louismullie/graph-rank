@@ -19,18 +19,10 @@ class GraphRank::TextRank
   # Add text and return PageRank.
   def run(text)
     @text = text
-    clean_text
-    @features = get_features
+    get_features
     filter_features
     build_graph
     calculate_ranking
-  end
-
-  # Clean text leaving just letters from a-z.
-  def clean_text
-    @text.downcase!
-    @text.gsub!(/[^a-z ]/, ' ')
-    @text.gsub!(/\s+/, " ")
   end
 
   # Return the features (keyword, sentence, etc.)
