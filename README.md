@@ -58,4 +58,4 @@ puts pr.calculate.inspect
 #    [2, 2.100731029131304]]
 ```
 
-Optionally, you can pass the damping factor (default = 0.85) and the convergence criterion (default = 0.01) as parameters to the PageRank constructor.
+Optionally, you can pass the damping factor (default = 0.85) and the convergence criterion (default = 0.01) as parameters to the PageRank constructor. Additionally, you can pass in an edge weight parameter to `#add` and it will be used in the PageRank calculation.
