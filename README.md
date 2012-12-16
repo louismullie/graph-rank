@@ -12,6 +12,8 @@ gem install graph-rank
 
 **TextRank**
 
+> Reference: R. Mihalcea and P. Tarau, “TextRank: Bringing Order into Texts,” in Proceedings of EMNLP 2004. Association for Computational Linguistics, 2004, pp. 404–411.
+
 ```ruby
 text = 'PageRank is a link analysis algorithm, named after Larry ' +
 'Page and used by the Google Internet search engine, that assigns ' +
@@ -28,23 +30,12 @@ tr.run(text)
 Optionally, you can pass the n-gram size (default = 3), as well as the damping and convergence (see PageRank) to the constructor. Finally, you can set stop words as follows:
 
 ```ruby
-t.stop_words = ["word", "another", "etc"]
+tr.stop_words = ["word", "another", "etc"]
 ```
 
-The default stop word list is as follows:
-
-    "about","also","are","away","because",
-    "been","beside","besides","between","but","cannot",
-    "could","did","etc","even","ever","every","for","had",
-    "have","how","into","isn","maybe","non","nor","now",
-    "should","such","than","that","then","these","this",
-    "those","though","too","was","wasn","were","what","when",
-    "where","which","while","who","whom","whose","will",
-    "with","would","wouldn","yes"
-
-> Reference: R. Mihalcea and P. Tarau, “TextRank: Bringing Order into Texts,” in Proceedings of EMNLP 2004. Association for Computational Linguistics, 2004, pp. 404–411.
-
 **PageRank**
+
+> Reference: Brin, S.; Page, L. (1998). "The anatomy of a large-scale hypertextual Web search engine". Computer Networks and ISDN Systems 30: 107–117.
 
 ```ruby
 
@@ -67,5 +58,3 @@ pr.calculate
 ```
 
 Optionally, you can pass the damping factor (default = 0.85) and the convergence criterion (default = 0.01) as parameters to the PageRank constructor.
-
-> Reference: Brin, S.; Page, L. (1998). "The anatomy of a large-scale hypertextual Web search engine". Computer Networks and ISDN Systems 30: 107–117.
