@@ -23,7 +23,7 @@ text = 'PageRank is a link analysis algorithm, named after Larry ' +
 
 tr = GraphRank::Keywords.new
 
-tr.run(text)
+tr.run(text).inspect
 
 ```
 
@@ -51,7 +51,8 @@ pr.add(1,3)
 pr.add(3,1)
 pr.add(5,1)
 
-pr.calculate
+puts pr.calculate.inspect
+
 # => [[1, 5.99497754810465], [3, 2.694723988738302], 
 #    [5, 2.694723988738302], [4, 2.100731029131304],
 #    [2, 2.100731029131304]]
