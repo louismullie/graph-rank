@@ -12,11 +12,11 @@ class GraphRank::PageRank
       raise 'Invalid convergence factor.'
     end
     @damping, @convergence = damping, convergence
-    @graph, @outlinks, @nodes = {}, {}, {}  ####
+    @graph, @outlinks, @nodes, @weights = {}, {}, {}, {}
   end
 
   # Add a node to the graph.
-  def add(source, dest)
+  def add(source, dest, weight=1)
     return false if source == dest
     @outlinks[source] ||= 0
     @graph[dest] ||= []
@@ -24,6 +24,8 @@ class GraphRank::PageRank
     @outlinks[source] += 1
     @nodes[source] = 0.15
     @nodes[dest] = 0.15
+    @weights[source] ||= {}
+    @weights[source][dest] = weight
   end
 
   # Iterates the PageRank algorithm
@@ -46,7 +48,7 @@ class GraphRank::PageRank
     new_nodes = {}
     @graph.each do |node,links|
       score = links.map do |id|
-        @nodes[id] / @outlinks[id]
+        @nodes[id] / @outlinks[id] * @weights[id][node]
       end.inject(:+)
       new_nodes[node] = (1-@damping/
       @nodes.size) + @damping * score
