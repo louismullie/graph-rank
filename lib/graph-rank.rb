@@ -1,7 +1,7 @@
 module GraphRank
   
   # Version number.
-  VERSION = '0.0.1'
+  VERSION = '0.0.2'
   
   # Core classes.
   require 'graph-rank/page_rank'
