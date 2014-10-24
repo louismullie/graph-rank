@@ -9,5 +9,4 @@ module GraphRank
   
   # Implementations.
   require 'graph-rank/keywords'
-  
 end
