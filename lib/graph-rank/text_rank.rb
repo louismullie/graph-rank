@@ -34,6 +34,10 @@ class GraphRank::TextRank
   def filter_features
     @features
   end
+  
+  def post_process ranking
+     raise 'Must be implemented in subclass' 
+  end
 
   # Build the graph from the features.
   def build_graph
@@ -42,7 +46,7 @@ class GraphRank::TextRank
 
   # Calculate the PageRank ranking.
   def calculate_ranking
-    @ranking.calculate
+    post_process(@ranking.calculate)
   end
 
 end
