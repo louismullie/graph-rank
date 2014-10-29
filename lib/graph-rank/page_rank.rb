@@ -22,6 +22,13 @@ class GraphRank::PageRank
     return false if source == dest
     @outlinks[source] ||= 0.0
     @graph[dest] ||= []
+    
+    #avoid establishing link if it already exists
+    if @graph[dest].include? source
+        puts("in page_rank.add link already exists between #{source} and #{dest}")
+        return true
+    end
+    
     @graph[dest] << source
     @outlinks[source] += 1.0
     @nodes[source] = 0.15
@@ -43,6 +50,13 @@ class GraphRank::PageRank
     end
     @nodes.sort_by {|k,v|v}.reverse
   end
+  
+  def printGraph
+      puts("printing graph:")
+      @graph.each do |node,links|
+          puts("#{node} <- #{links}")
+      end
+  end
 
   private
 
@@ -63,7 +77,14 @@ class GraphRank::PageRank
   # Check for convergence.
   def convergence(current)
     diff = {}
+    puts("in convergence")
+    puts("current = #{current}")
+    puts("nodes = #{@nodes}")
     @nodes.each do |k,v|
+      puts("k = #{k}")
+      puts("nodes[v] = #{v}")
+      puts("current[v] = #{current[k]}")
+      
       diff[k] = current[k] - @nodes[k]
     end
     total = 0.0

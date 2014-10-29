@@ -1,6 +1,11 @@
 # Implement the PageRank algorithm
 # for unsupervised keyword extraction.
 
+#HOW TO BUILD GEM
+#in outer graph-rank dir
+#gem build graph-rank.gemspec
+#gem install ./graph-rank.<version>.gem
+
 #HOW TO RUN
 #if you wanna update and reload the files inside graph-rank folder you can go to graph-rank folder then do 
 #load '../graph-rank.rb' #load from the parent dir
@@ -29,10 +34,11 @@ class GraphRank::Keywords < GraphRank::TextRank
   
     # combines adjacent high ranking words into multi words
     #input: takes the output of the textrank.run function
+    #Output: produces a list of combined and single words, the weight of combined words is the sum of weights of single words comprising it, returns the top 1/3*NumberOfVertices (i.e. single words passed in) of combined and single words list 
     def combineAdjacent wordRankings
         
         #TAKE TOP 1/T words
-        wordRankings = wordRankings.slice(0..wordRankings.size/2)
+        wordRankings = wordRankings.slice(0..wordRankings.size/1)
         #TAKE TOP 1/T words
         
         wordRankings = wordRankings.to_h
@@ -42,7 +48,10 @@ class GraphRank::Keywords < GraphRank::TextRank
         candidate = ""
         weight = 0
         
-        text = @text.gsub(/[^a-z ]/, ' * ')
+        text = @text.gsub(/[^a-z|-| ]/, ' * ')
+        text = text.gsub!(/\s+/, " ").strip #multi spaces into 1
+
+        puts("combineAdjacent text after replacing nonwords with * = #{text}")
         for word in text.split " "
             if wordRankings.has_key? word
                 candidate = candidate + " " + word
@@ -107,7 +116,7 @@ class GraphRank::Keywords < GraphRank::TextRank
         
         ## ELIMINATE  PUNCTUATIONS FROM CANDIDATES ##
 
-        return comCandsPuncsElimed.sort_by {|k,v|v}.reverse
+        return comCandsPuncsElimed.sort_by {|k,v|v}.reverse.slice(0..wordRankings.size/3)
     end
     
     def post_process ranking
@@ -145,7 +154,7 @@ class GraphRank::Keywords < GraphRank::TextRank
   def clean_text text
     text = String.new(text)
     text = text.downcase
-    text.gsub!(/[^a-z ]/, ' ')
+    text.gsub!(/[^a-z|-| ]/, ' ')
     text.gsub!(/\s+/, " ")
   end
 
@@ -167,14 +176,20 @@ class GraphRank::Keywords < GraphRank::TextRank
       puts("min = #{min}, max = #{max}")
       while min <= max
         puts "@features[min] = #{@features[min]} and min = #{min} and i = #{i}"  
-        if @features[min] and min != i and min > 0
+        if @features[min] and min != i and min >= 0
+            
+          #add a bi-directoinal edge, don't worry about adding an edge that already exists since pagerank.add ignores it    
           @ranking.add(@features[i], @features[min])
-          puts("min = #{min} - i = #{i}")
-          puts("connecting #{@features[i]} - #{@features[min]}")
+          @ranking.add(@features[min], @features[i])
+          puts("min = #{min} , i = #{i}")
+          puts("link: #{@features[i]} -> #{@features[min]}")
+          puts("link: #{@features[min]} -> #{@features[i]}")
         end
         min += 1
       end
     end
+    
+    @ranking.printGraph
   end
 
 end
