@@ -39,7 +39,7 @@ class GraphRank::Keywords < GraphRank::TextRank
     def combineAdjacent wordRankings
         
         #TAKE TOP 1/T words
-        wordRankings = wordRankings#.slice(0..wordRankings.size/2) #ATTENTION: if you uncomment this comment out bottom ".slice(0..wordRankings.size/3)"
+        wordRankings = wordRankings.slice(0..wordRankings.size/2) #ATTENTION: if you uncomment this comment out bottom ".slice(0..wordRankings.size/3)"
         #TAKE TOP 1/T words
         
         wordRankings = wordRankings.to_h
@@ -116,7 +116,7 @@ class GraphRank::Keywords < GraphRank::TextRank
         
         ## ELIMINATE  PUNCTUATIONS FROM CANDIDATES ##
 
-        return comCandsPuncsElimed.sort_by {|k,v|v}.reverse.slice(0..wordRankings.size/3) #it's eithr this or the "TAKE TOP 1/T words" above
+        return comCandsPuncsElimed.sort_by {|k,v|v}.reverse#.slice(0..wordRankings.size/3) #it's eithr this or the "TAKE TOP 1/T words" above
     end
     
     def post_process ranking
