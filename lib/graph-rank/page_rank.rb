@@ -7,7 +7,7 @@ class GraphRank::PageRank
   # A maximum number of iterations can also be supplied
   # (default is no maximum, i.e. iterate until convergence).
   def initialize(damping=nil, convergence=nil, max_it=-1)
-    damping ||= 0.85; convergence ||= 0.01
+    damping ||= 0.85; convergence ||= 0.0001
     if damping <= 0 or damping > 1
       raise 'Invalid damping factor.'
     elsif convergence < 0 or convergence > 1
@@ -41,13 +41,16 @@ class GraphRank::PageRank
   # until convergence is reached.
   def calculate
     done = false
+    numiterations = 0
     until done
+      numiterations += 1      
       break if @max_it == 0
       new_nodes = iteration
       done = convergence(new_nodes)
       @nodes = new_nodes
       @max_it -= 1
     end
+    puts("numiterations = #{numiterations}")
     @nodes.sort_by {|k,v|v}.reverse
   end
   
@@ -77,14 +80,7 @@ class GraphRank::PageRank
   # Check for convergence.
   def convergence(current)
     diff = {}
-    puts("in convergence")
-    puts("current = #{current}")
-    puts("nodes = #{@nodes}")
-    @nodes.each do |k,v|
-      puts("k = #{k}")
-      puts("nodes[v] = #{v}")
-      puts("current[v] = #{current[k]}")
-      
+    @nodes.each do |k,v|      
       diff[k] = current[k] - @nodes[k]
     end
     total = 0.0

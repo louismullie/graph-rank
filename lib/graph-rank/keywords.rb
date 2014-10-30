@@ -18,6 +18,7 @@
 # and if you make changes the load './whateverfileInGraph-rankFoler.rb'
 
 require 'engtagger'
+require 'stopwords'
 
 class GraphRank::Keywords < GraphRank::TextRank
     
@@ -38,12 +39,12 @@ class GraphRank::Keywords < GraphRank::TextRank
     def combineAdjacent wordRankings
         
         #TAKE TOP 1/T words
-        wordRankings = wordRankings.slice(0..wordRankings.size/1)
+        wordRankings = wordRankings#.slice(0..wordRankings.size/2) #ATTENTION: if you uncomment this comment out bottom ".slice(0..wordRankings.size/3)"
         #TAKE TOP 1/T words
         
         wordRankings = wordRankings.to_h
         
-        puts("top words = #{wordRankings}")
+        #puts("top words = #{wordRankings}")
         combinedCandidates = Hash.new
         candidate = ""
         weight = 0
@@ -51,7 +52,6 @@ class GraphRank::Keywords < GraphRank::TextRank
         text = @text.gsub(/[^a-z|-| ]/, ' * ')
         text = text.gsub!(/\s+/, " ").strip #multi spaces into 1
 
-        puts("combineAdjacent text after replacing nonwords with * = #{text}")
         for word in text.split " "
             if wordRankings.has_key? word
                 candidate = candidate + " " + word
@@ -116,7 +116,7 @@ class GraphRank::Keywords < GraphRank::TextRank
         
         ## ELIMINATE  PUNCTUATIONS FROM CANDIDATES ##
 
-        return comCandsPuncsElimed.sort_by {|k,v|v}.reverse.slice(0..wordRankings.size/3)
+        return comCandsPuncsElimed.sort_by {|k,v|v}.reverse.slice(0..wordRankings.size/3) #it's eithr this or the "TAKE TOP 1/T words" above
     end
     
     def post_process ranking
@@ -126,11 +126,8 @@ class GraphRank::Keywords < GraphRank::TextRank
 
   # Split the text on words.
   def get_features
-    puts("before clean text = #{@text}")  
     text = clean_text @text
-    puts("after clean text = #{@text}")  
     @features = text.split(' ')
-    puts "unfiltered @features = #{@features} "
   end
 
   # Remove short and stop words.
@@ -142,8 +139,8 @@ class GraphRank::Keywords < GraphRank::TextRank
     nouns = @tgr.get_nouns(tagged)
     adjs = @tgr.get_adjectives(tagged)      
     nounsnadjs = nouns.merge(adjs)
-    puts("nounsnadjs = #{nounsnadjs}")
     @features.delete_if { |word| not nounsnadjs.has_key?(word) }
+    
     ### POS TAG FILTER ###    
     
     #remove_short_words
@@ -170,24 +167,29 @@ class GraphRank::Keywords < GraphRank::TextRank
 
   # Build the co-occurence graph for an n-gram.
   def build_graph
-    puts("features = #{@features}")  
-    @features.each_with_index do |f,i|
-      min, max = i - @ngram_size, i + @ngram_size
-      puts("min = #{min}, max = #{max}")
-      while min <= max
-        puts "@features[min] = #{@features[min]} and min = #{min} and i = #{i}"  
-        if @features[min] and min != i and min >= 0
-            
-          #add a bi-directoinal edge, don't worry about adding an edge that already exists since pagerank.add ignores it    
-          @ranking.add(@features[i], @features[min])
-          @ranking.add(@features[min], @features[i])
-          puts("min = #{min} , i = #{i}")
-          puts("link: #{@features[i]} -> #{@features[min]}")
-          puts("link: #{@features[min]} -> #{@features[i]}")
-        end
-        min += 1
+      text = @text.gsub(/[^a-z|-| ]/, ' * ')
+      text = text.gsub!(/\s+/, " ").strip.downcase #multi spaces into 1
+      
+
+
+      
+      words = text.split " "
+      words.delete_if {|word| Stopwords.is? word }
+      
+      windowLength = @ngram_size 
+      words.each_with_index do |word, i|
+          puts("i = #{i}, word = #{word}")
+          if(@features.include? words[i])
+              for j in (i+1..i+windowLength)
+                  puts(" j = #{j}, word = #{words[j]}")
+                  if j < words.size and @features.include? words[j]
+                      puts("connecting #{words[i]}")
+                      @ranking.add(words[i], words[j])
+                      @ranking.add(words[j], words[i])
+                  end
+              end
+          end
       end
-    end
     
     @ranking.printGraph
   end
