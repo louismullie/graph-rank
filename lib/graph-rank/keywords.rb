@@ -192,26 +192,37 @@ class GraphRank::Keywords < GraphRank::TextRank
   #input is an array consisting of phrases and their weights [{"word" => phrase, "weight" => itsWeight}]
   #this method build a graph that will be used to rerank them
   #option one: place links between terms that have one word in common
-  def build_rerank_graph phraseWeights, termFreq
-    
+  def build_rerank_graph phraseWeights, termFreq, logFile
+    puts("in build_rerenk_graph.")
     #option one
     for pw in phraseWeights
-      weight = 0.0
       for pw2 in phraseWeights
-        for token in pw['word'].split(/ |-/)
-          for token2 in pw2['word'].split(/ |-/)
+        weight = 0.0
+
+        #calcualte weight between terms based on common space-separated tokens and their inverse term freq
+        for token in pw['word'].split(" ")
+          for token2 in pw2['word'].split(" ")
             if token == token2
-              weight = weight + 1.0 / Float(termFreq[token] + termFreq[token2])
+              weight = weight + 1.0 / Float(termFreq[token])
             end
           end
         end
+        #calcualte weight between terms based on common space-separated tokens and their inverse term freq
+        
+        #add edge to graph
         if weight > 0
-          @ranking.add(words[i], words[j])
+          puts("adding edge beween #{pw["word"]} -> #{pw2["word"]}, weight = #{weight}")
+          @ranking.add(pw["word"], pw2["word"], 1.0)
         end
+        #add edge to graph
+        
       end
     end
-    puts("in build_rerenk_graph")
-    @ranking.printGraph
+
+    logFile.puts("textRerank graph = #{@ranking.printGraph}")
+    puts("just printed the graph, going to calculate ...")
+    result = @ranking.calculate
+    return result
   end
   
   # Build the co-occurence graph for an n-gram.

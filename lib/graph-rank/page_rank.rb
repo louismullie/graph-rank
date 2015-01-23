@@ -7,7 +7,7 @@ class GraphRank::PageRank
   # A maximum number of iterations can also be supplied
   # (default is no maximum, i.e. iterate until convergence).
   def initialize(damping=nil, convergence=nil, max_it=-1)
-    damping ||= 0.85; convergence ||= 0.0001
+    damping ||= 0.85; convergence ||= 0.01
     if damping <= 0 or damping > 1
       raise 'Invalid damping factor.'
     elsif convergence < 0 or convergence > 1
@@ -40,6 +40,7 @@ class GraphRank::PageRank
   # Iterates the PageRank algorithm
   # until convergence is reached.
   def calculate
+    puts("in page_rank#calculate")
     done = false
     numiterations = 0
     until done
