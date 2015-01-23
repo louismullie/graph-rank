@@ -39,7 +39,7 @@ class GraphRank::Keywords < GraphRank::TextRank
     def combineAdjacent wordRankings
         
         #TAKE TOP 1/T words
-        wordRankings = wordRankings#.slice(0..wordRankings.size/2) #ATTENTION: if you uncomment this comment out bottom ".slice(0..wordRankings.size/3)"
+        wordRankings = wordRankings#.slice(0..wordRankings.size/3) #ATTENTION: if you uncomment this comment out bottom ".slice(0..wordRankings.size/3)"
         #TAKE TOP 1/T words
         
         wordRankings = wordRankings.to_h
@@ -116,7 +116,7 @@ class GraphRank::Keywords < GraphRank::TextRank
         
         ## ELIMINATE  PUNCTUATIONS FROM CANDIDATES ##
 
-        return comCandsPuncsElimed.sort_by {|k,v|v}.reverse.slice(0..wordRankings.size/3) #it's eithr this or the "TAKE TOP 1/T words" above
+        return comCandsPuncsElimed.sort_by {|k,v|v}.reverse#.slice(0..wordRankings.size/3) #it's eithr this or the "TAKE TOP 1/T words" above
     end
     
     def post_process ranking
@@ -137,15 +137,39 @@ class GraphRank::Keywords < GraphRank::TextRank
     @tgr = EngTagger.new
     tagged = @tgr.add_tags(@text)
     nouns = @tgr.get_nouns(tagged)
-    adjs = @tgr.get_adjectives(tagged)      
+    adjs = @tgr.get_adjectives(tagged)
+    verbs = get_verbs(tagged)      
+
     nounsnadjs = nouns.merge(adjs)
+    nounsAdjsVerbs = nounsnadjs.merge(verbs)
+
+    #filter anything except for nouns and adjectives (for hulth dataset)
     @features.delete_if { |word| not nounsnadjs.has_key?(word) }
+    
+    #filter anything except for nouns and adjectives and verbs (for semeval dataset)
+    #@features.delete_if { |word| not nounsAdjsVerbs.has_key?(word)  }
+    
+    
+    
     
     ### POS TAG FILTER ###    
     
     #remove_short_words
     #remove_stop_words
   end
+  
+  #return just the tags for a text
+  def get_verbs(tagged)
+      verbs = Hash.new
+      infVerbs = @tgr.get_infinitive_verbs(tagged)
+      pastVerbs = @tgr.get_past_tense_verbs(tagged)
+      gerVerbs = @tgr.get_gerund_verbs(tagged)
+      passVerbs = @tgr.get_passive_verbs(tagged)
+      basePresVerbs = @tgr.get_base_present_verbs(tagged)
+      
+      verbs = infVerbs.merge(pastVerbs).merge(gerVerbs).merge(passVerbs).merge(basePresVerbs)
+  end
+
 
   # Clean text leaving just letters from a-z.
   def clean_text text
@@ -165,6 +189,31 @@ class GraphRank::Keywords < GraphRank::TextRank
     @features.delete_if { |word| word.length < 3 }
   end
 
+  #input is an array consisting of phrases and their weights [{"word" => phrase, "weight" => itsWeight}]
+  #this method build a graph that will be used to rerank them
+  #option one: place links between terms that have one word in common
+  def build_rerank_graph phraseWeights, termFreq
+    
+    #option one
+    for pw in phraseWeights
+      weight = 0.0
+      for pw2 in phraseWeights
+        for token in pw['word'].split(/ |-/)
+          for token2 in pw2['word'].split(/ |-/)
+            if token == token2
+              weight = weight + 1.0 / Float(termFreq[token] + termFreq[token2])
+            end
+          end
+        end
+        if weight > 0
+          @ranking.add(words[i], words[j])
+        end
+      end
+    end
+    puts("in build_rerenk_graph")
+    @ranking.printGraph
+  end
+  
   # Build the co-occurence graph for an n-gram.
   def build_graph
       text = @text.gsub(/[^a-z|-| ]/, ' * ')
