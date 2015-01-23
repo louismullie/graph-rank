@@ -198,12 +198,16 @@ class GraphRank::Keywords < GraphRank::TextRank
     for pw in phraseWeights
       for pw2 in phraseWeights
         weight = 0.0
+        
+        logFile.puts("pw = #{pw['word']}, pw2 = #{pw2['word']}")
 
         #calcualte weight between terms based on common space-separated tokens and their inverse term freq
         for token in pw['word'].split(" ")
           for token2 in pw2['word'].split(" ")
+            logFile.puts("before token == token2 token = #{token} and token2 = #{token2} ")
             if token == token2
               weight = weight + 1.0 / Float(termFreq[token])
+              logFile.puts "adding connection between pw = #{pw['word']}, pw2 = #{pw2['word']}, weight = #{weight}"
             end
           end
         end

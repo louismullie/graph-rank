@@ -19,7 +19,14 @@ class GraphRank::PageRank
 
   # Add a node to the graph.
   def add(source, dest, weight=1.0)
-    return false if source == dest
+    
+    #flag
+    @allowSelfEdges = true
+    #flag
+    
+    if not @allowSelfEdges
+      return false if source == dest
+    end
     @outlinks[source] ||= 0.0
     @graph[dest] ||= []
     
