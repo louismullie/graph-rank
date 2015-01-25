@@ -190,33 +190,74 @@ class GraphRank::Keywords < GraphRank::TextRank
   end
 
   #input is an array consisting of phrases and their weights [{"word" => phrase, "weight" => itsWeight}]
-  #this method build a graph that will be used to rerank them
+  #this method build a graph that will be used to rerank them. termFreq and idf arguments passed in determine the weighting scheme (if on nil the other is used, if both not nil tf.idf is used)
   #option one: place links between terms that have one word in common
-  def build_rerank_graph phraseWeights, termFreq, logFile
+  def build_rerank_graph phraseWeights, termFreq, idf, ngramPositions, boostJaccardByTermLenghsSum,  logFile, windowSize = 10
     puts("in build_rerenk_graph.")
     #option one
     for pw in phraseWeights
       for pw2 in phraseWeights
         weight = 0.0
         
-        logFile.puts("pw = #{pw['word']}, pw2 = #{pw2['word']}")
-
-        #calcualte weight between terms based on common space-separated tokens and their inverse term freq
-        for token in pw['word'].split(" ")
-          for token2 in pw2['word'].split(" ")
-            logFile.puts("before token == token2 token = #{token} and token2 = #{token2} ")
-            if token == token2
-              weight = weight + 1.0 / Float(termFreq[token])
-              logFile.puts "adding connection between pw = #{pw['word']}, pw2 = #{pw2['word']}, weight = #{weight}"
+        #logFile.puts("pw = #{pw['word']}, pw2 = #{pw2['word']}")
+        
+        #calculate the number of times these phrases occur within a certain didstance d
+        if not ngramPositions.nil?
+          #PHRASE COOC COUNT EDGE WEIGHTING
+          d = windowSize
+          numCoocs = 0
+          pwPositions = ngramPositions[pw['word']]    
+          pw2Positions = ngramPositions[pw2['word']]
+          for pos in pwPositions
+            for pos2 in pw2Positions
+              if (pos - pos2).abs < d
+                numCoocs = numCoocs + 1
+              end
             end
+          end
+          #straigh cooc count
+          #weight = numCoocs
+          
+          #jaccard
+          weight = Float(numCoocs) / ( Float(ngramPositions[pw['word']].size) + Float(ngramPositions[pw2['word']].size) )
+          
+          if boostJaccardByTermLenghsSum
+            #jaccard phrase length boosted
+            weight = weight * Float(pw['word'].split.size + pw2['word'].split.size)
+          end
+          #PHRASE COOC COUNT EDGE WEIGHTING
+        else
+          #SHARED TOKEN BASED EDGE WEIGHITNG
+          #calcualte weight between terms based on common space-separated tokens and their inverse term freq
+          for token in pw['word'].split(" ")
+            for token2 in pw2['word'].split(" ")
+              #logFile.puts("before token == token2 token = #{token} and token2 = #{token2} ")
+              if token == token2
+                if not termFreq.nil?
+                  weight = weight + 10000.0 / Float(termFreq[token])
+                end
+                if not idf.nil?
+                  weight = weight + idf[token]
+                end
+                if not termFreq.nil? and not idf.nil?
+                  weight = weight + Float(termFreq[token])*idf[token]
+                end
+                #logFile.puts "adding connection between pw = #{pw['word']}, pw2 = #{pw2['word']}, weight = #{weight}"
+              end
+            end
+            #SHARED TOKEN BASED WEIGHITNG
           end
         end
         #calcualte weight between terms based on common space-separated tokens and their inverse term freq
-        
+
+
+        logFile.puts(" edge beween #{pw["word"]} -> #{pw2["word"]}, weight = #{weight}")
         #add edge to graph
-        if weight > 0
-          puts("adding edge beween #{pw["word"]} -> #{pw2["word"]}, weight = #{weight}")
-          @ranking.add(pw["word"], pw2["word"], 1.0)
+        if weight > 0  
+          #use constant weight
+          #@ranking.add(pw["word"], pw2["word"], 1.0)
+          
+          @ranking.add(pw["word"], pw2["word"], weight)
         end
         #add edge to graph
         

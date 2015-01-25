@@ -6,7 +6,7 @@ class GraphRank::PageRank
   # Initialize with default damping and convergence.
   # A maximum number of iterations can also be supplied
   # (default is no maximum, i.e. iterate until convergence).
-  def initialize(damping=nil, convergence=nil, max_it=-1)
+  def initialize(damping=nil, convergence=nil, max_it=10000)
     damping ||= 0.85; convergence ||= 0.01
     if damping <= 0 or damping > 1
       raise 'Invalid damping factor.'
@@ -53,7 +53,10 @@ class GraphRank::PageRank
     until done
       numiterations += 1      
       break if @max_it == 0
+      #puts("right before iteration")
       new_nodes = iteration
+      #puts("right after iteration")
+      #printGraph new_nodes
       done = convergence(new_nodes)
       @nodes = new_nodes
       @max_it -= 1
@@ -62,10 +65,14 @@ class GraphRank::PageRank
     @nodes.sort_by {|k,v|v}.reverse
   end
   
-  def printGraph
+  def printGraph new_nodes = nil
       puts("printing graph:")
       @graph.each do |node,links|
-          puts("#{node} <- #{links}")
+          if not new_nodes.nil?  and new_nodes.has_key? node
+            puts("#{node} (#{new_nodes[node]}) <- #{links}")
+          else
+            puts("#{node} <- #{links}")
+          end
       end
   end
 
@@ -74,8 +81,10 @@ class GraphRank::PageRank
   # Performs one iteration to calculate
   # the PageRank ranking for all nodes.
   def iteration
+    #puts('in iteration')
     new_nodes = {}
     @graph.each do |node,links|
+      #puts("node= #{node}, links = #{links}")
       score = links.map do |id|
         @nodes[id] / @outlinks[id] * @weights[id][node]
       end.inject(:+)
