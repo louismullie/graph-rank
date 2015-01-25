@@ -73,7 +73,12 @@ class GraphRank::PageRank
           else
             puts("#{node} <- #{links}")
           end
+          for link in links
+            weight = @weights[link][node]
+            puts("#{link} edge weight = #{weight}")
+          end
       end
+      puts("--------------------")
   end
 
   private
