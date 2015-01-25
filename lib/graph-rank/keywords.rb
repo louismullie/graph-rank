@@ -188,6 +188,40 @@ class GraphRank::Keywords < GraphRank::TextRank
   def remove_short_words
     @features.delete_if { |word| word.length < 3 }
   end
+  
+  #graph where individual occurrences of words are nodes
+  #note, weights have to be normalized (i.e. smaller than 1) or it wouldn't coverge
+  def build_graph_cam phraseWeights, ngramPositions, logFile
+    puts("in build_graph_ind_occ ")
+    
+    #BUILD GRAPH
+    for pw in phraseWeights
+      for pw2 in phraseWeights
+        
+        #SKIP NEGATIVE WEIGHTS OR IF WORDS ARE THE SAME
+        if pw['weight'] <= 0 or pw2['weight'] <=0 or pw['word'] == pw2['word']
+          next
+        end
+        
+        pwPositions = ngramPositions[pw['word']]    
+        pw2Positions = ngramPositions[pw2['word']]
+
+        for pos in pwPositions
+          for pos2 in pw2Positions
+            @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", ((pw['weight']+pw2['weight'])/2)/(pos-pos2).abs )
+          end
+        end
+        
+      end
+    end
+    #BUILD GRAPH
+    puts('graph is built in build_graph_cam, going to calculate pagerank')
+    
+    result = @ranking.calculate
+    return result
+    
+   
+  end
 
   #input is an array consisting of phrases and their weights [{"word" => phrase, "weight" => itsWeight}]
   #this method build a graph that will be used to rerank them. termFreq and idf arguments passed in determine the weighting scheme (if one nil the other is used, if both not nil tf.idf is used)
@@ -213,9 +247,14 @@ class GraphRank::Keywords < GraphRank::TextRank
           pwPositions = ngramPositions[pw['word']]    
           pw2Positions = ngramPositions[pw2['word']]
           
-          
+
+          topicRankDist = 0.0
           for pos in pwPositions
             for pos2 in pw2Positions
+              
+              ###CALC DISTANCE TOPICRANK WAY###
+              topicRankDist = topicRankDist +  1.0 / (pos - pos2).abs * Float(pw['weight'] + pw2['weight']) / 2
+              ###CALC DISTANCE TOPICRANK WAY###
               
               #check to see if your are not counting a cooc with a word withing the ngram
               if pos < pos2 and pos+pw['word'].split.size > pos2
@@ -244,7 +283,12 @@ class GraphRank::Keywords < GraphRank::TextRank
           #weight = numCoocs
           
           #jaccard
-          weight = Float(numCoocs) / ( Float(ngramPositions[pw['word']].size) + Float(ngramPositions[pw2['word']].size) )
+          #weight = Float(numCoocs) / ( Float(ngramPositions[pw['word']].size) + Float(ngramPositions[pw2['word']].size) ) / 100
+          
+          #straight num cooks
+          #weight = Float(numCoocs) / 100
+          
+          weight = termFreq[pw['word']] * termFreq[pw2['word']] * topicRankDist / 100
           
           if boostJaccardByTermLenghsSum
             #jaccard phrase length boosted
@@ -258,15 +302,16 @@ class GraphRank::Keywords < GraphRank::TextRank
             for token2 in pw2['word'].split(" ")
               #logFile.puts("before token == token2 token = #{token} and token2 = #{token2} ")
               if token == token2
-                if not termFreq.nil?
-                  weight = weight + 1.0 / Float(termFreq[token])
-                end
-                if not idf.nil?
-                  weight = weight + idf[token]
-                end
                 if not termFreq.nil? and not idf.nil?
-                  weight = weight + Float(termFreq[token])*idf[token]
+                  weight = weight + Float(termFreq[token])*idf[token]  / 1000.0
+                elsif not termFreq.nil?
+                  weight = weight + (1.0 / Float(termFreq[token])) / 1000.0
+                elsif not idf.nil?
+                  weight = weight + idf[token] / 1000.0
+                else
+                  weight = weight + 1.0 / (pw2['word'].split(" ").size + pw['word'].split(" ").size)
                 end
+                
                 #logFile.puts "adding connection between pw = #{pw['word']}, pw2 = #{pw2['word']}, weight = #{weight}"
               end
             end
@@ -281,6 +326,12 @@ class GraphRank::Keywords < GraphRank::TextRank
         if weight > 0  
           #use constant weight
           #@ranking.add(pw["word"], pw2["word"], 1.0)
+
+          #weights greater than one cause divergence and infinity weights that break things
+          if weight > 1
+            weight = 1
+          end
+          
           
           @ranking.add(pw["word"], pw2["word"], weight)
         end
