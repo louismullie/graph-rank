@@ -18,7 +18,7 @@ class GraphRank::PageRank
   end
 
   # Add a node to the graph.
-  def add(source, dest, weight=1.0)
+  def add(source, dest, weight=1.0, sourcePriorWeight = 0.15, destPriorWeight = 0.15)
     
     #flag
     @allowSelfEdges = true
@@ -38,8 +38,8 @@ class GraphRank::PageRank
     
     @graph[dest] << source
     @outlinks[source] += 1.0
-    @nodes[source] = 0.15
-    @nodes[dest] = 0.15
+    @nodes[source] = sourcePriorWeight #0.15
+    @nodes[dest] = destPriorWeight # 0.15
     @weights[source] ||= {}
     @weights[source][dest] = weight
   end

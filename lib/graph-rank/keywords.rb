@@ -20,17 +20,22 @@
 require 'engtagger'
 require 'stopwords'
 
+require 'net/http'
+require 'json'
+
+
 class GraphRank::Keywords < GraphRank::TextRank
     
   attr_accessor :hulth1939, :stop_words, :text
+  
 
   
   def initialize()
       #text of abstract 1939 in test set of hulth dataset used as example in textrank paper
       @hulth1939 = "Compatibility of systems of linear constraints over the set of natural numbers Criteria of compatibility of a system of linear Diophantine equations, strict inequations, and nonstrict inequations are considered. Upper bounds for components of a minimal set of solutions and algorithms of construction of minimal generating sets of solutions for all types of systems are given. These criteria and the corresponding algorithms for constructing a minimal supporting set of solutions can be used in solving all the considered types of systems and systems of mixed types"
-      
-      super()
-      
+      @websimAlreadyCalulated = Hash.new
+  
+      super()    
   end
   
     # combines adjacent high ranking words into multi words
@@ -189,9 +194,88 @@ class GraphRank::Keywords < GraphRank::TextRank
     @features.delete_if { |word| word.length < 3 }
   end
   
+  #calcualtes semantic similarity between two phrases using www stats
+  def calcWebSeimilarity term1, term2
+    if @websimAlreadyCalulated.has_key?(term1+"|"+term2)
+      return @websimAlreadyCalulated[term1+"|"+term2]
+    elsif @websimAlreadyCalulated.has_key?(term2+"|"+term1)
+      return @websimAlreadyCalulated[term2+"|"+term1]
+    end
+    
+    if true
+      #using GOOGLE SEARCH##3
+      googleCustomSearch = "https://www.googleapis.com/customsearch/v1?key=AIzaSyAyG411hP82joew7H6eS7BkOlYRmnzhcsQ&cx=018143346535097940560:ajfearh_lmu&q="
+      uriBoth = URI(URI.escape(googleCustomSearch + term1 + " " + term2))
+      uri1 = URI(URI.escape(googleCustomSearch+term1))
+      uri2 = URI(URI.escape(googleCustomSearch+term2))
+      #using GOOGLE SEARCH##3
+      
+      numContainBoth = JSON.parse(Net::HTTP.get(uriBoth))["searchInformation"]["totalResults"]
+      numContain1 = JSON.parse(Net::HTTP.get(uri1))["searchInformation"]["totalResults"]
+      numContain2 = JSON.parse(Net::HTTP.get(uri2))["searchInformation"]["totalResults"]
+    end
+    
+    if false
+      #using sindice
+      query = term1+" "+term2
+      sindice = "http://api.sindice.com/v3/search?q=#{query}&format=json"
+      uriBoth = URI(URI.escape(sindice))
+    
+      query = term1
+      sindice = "http://api.sindice.com/v3/search?q=#{query}&format=json"
+      uri1 = URI(URI.escape(sindice))
+    
+      query = term2
+      sindice = "http://api.sindice.com/v3/search?q=#{query}&format=json"
+      uri2 = URI(URI.escape(sindice))
+      
+      numContainBoth = JSON.parse(Net::HTTP.get(uriBoth))["totalResults"]
+      numContain1 = JSON.parse(Net::HTTP.get(uri1))["totalResults"]
+      numContain2 = JSON.parse(Net::HTTP.get(uri2))["totalResults"]
+    end
+    
+    puts("uriBoth = #{uriBoth} ")
+    puts("web response in webSim = #{Net::HTTP.get(uriBoth)}")
+    
+    #using sindice
+
+    
+    #for now, [ ] experiment with other measures 
+    puts("terms = #{term1} and #{term2}, numContainBoth = #{numContainBoth}, numContain1 = #{numContain1} numContain2 = #{numContain2}")
+    @logFile.puts("in calcWebSeimilarity numContainBoth = #{numContainBoth}, numContain1 = #{numContain1} numContain2 = #{numContain2}")
+    jaccard = Float(numContainBoth)/Float(numContain1+numContain2)
+    return jaccard
+  end
+  
+  def build_graph_web_sim phraseWeights, logFile
+    puts("in build_graph_web_sim ")
+    @logFile = logFile
+    
+    #BUILD GRAPH
+    for pw in phraseWeights
+      for pw2 in phraseWeights
+        #SKIP NEGATIVE WEIGHTS OR IF WORDS ARE THE SAME
+        if pw['weight'] <= 0 or pw2['weight'] <=0 or pw['word'].strip == pw2['word'].strip
+          next
+        end
+        
+        webSim = calcWebSeimilarity(pw["word"], pw2["word"])
+        @websimAlreadyCalulated[pw["word"]+"|"+pw2["word"]] = webSim
+
+        logFile.puts("webSim for #{pw["word"]} and #{pw2["word"]} = #{webSim}")
+        
+        @ranking.add(pw["word"], pw2["word"], pw['weight'] * pw2['weight'] * webSim )
+      end    
+    end
+    #BUILD GRAPH
+    
+    return @ranking.calculate
+  end
+
+  
   #graph where individual occurrences of words are nodes
   #note, weights have to be normalized (i.e. smaller than 1) or it wouldn't coverge
-  def build_graph_cam phraseWeights, ngramPositions, logFile
+  def build_graph_cam phraseWeights, ngramPositions, idfHash, docLength, logFile
     puts("in build_graph_ind_occ ")
     
     #BUILD GRAPH
@@ -199,7 +283,7 @@ class GraphRank::Keywords < GraphRank::TextRank
       for pw2 in phraseWeights
         
         #SKIP NEGATIVE WEIGHTS OR IF WORDS ARE THE SAME
-        if pw['weight'] <= 0 or pw2['weight'] <=0 or pw['word'] == pw2['word']
+        if pw['weight'] <= 0 or pw2['weight'] <=0 # we check agains putting an edge between something and itself using positions so don't need this: or pw['word'] == pw2['word']
           next
         end
         
@@ -208,13 +292,47 @@ class GraphRank::Keywords < GraphRank::TextRank
 
         for pos in pwPositions
           for pos2 in pw2Positions
-            @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", ((pw['weight']+pw2['weight'])/2)/(pos-pos2).abs )
+            
+            #check to see if your are not placing an edge from word withing the ngram to the ngram (which would have inifinite weight and is just conceptually wrong)
+            if pos < pos2 and pos+pw['word'].split.size > pos2
+              next
+            elsif pos2 < pos and pos2+pw2['word'].split.size > pos
+              next
+            elsif pos == pos2
+              next
+            end
+            
+            if false
+              #used this as numerator here and it underperfed bad ie it was edgew/(pos-pos2).abs
+              if(idfHash[pw2['word']] >= idfHash[pw['word']])
+                edgew = 1.0
+              else
+                edgew = idfHash[pw2['word']] / idfHash[pw['word']]
+              end
+            end 
+            #old edge weight numerator ((pw['weight']+pw2['weight'])/2)
+            #(idfHash[pw2['word']] / (idfHash[pw2['word']] + idfHash[pw['word']]))  this was numerator too and it underperfed
+            if docLength < 3500
+              docLength = 3500
+            end
+            positionFactor = - 1.0 * Math.log(Float(pos+pos2)/2.0 / Float(docLength))
+            maxNgramLength = 6.0
+            termLengthFactor = Float(pw['word'].split.size + pw2['word'].split.size) / 2.0 / maxNgramLength
+            
+            #this is the version where term weights are factored into edge weights, it's underperfing slighly
+            #@ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor * termLengthFactor / Float((pos-pos2)).abs ** 2) #experimenting with power of two here
+            
+            #this is the version where edge weights are based on average position of terms from document start and their distance and term weights are passed in as initial weights of each node
+            @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
+            
           end
         end
         
       end
     end
     #BUILD GRAPH
+    
+    logFile.puts("camRerank graph = #{@ranking.printGraph}")
     puts('graph is built in build_graph_cam, going to calculate pagerank')
     
     result = @ranking.calculate
