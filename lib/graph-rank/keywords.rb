@@ -299,6 +299,16 @@ class GraphRank::Keywords < GraphRank::TextRank
         for pos in pwPositions
           for pos2 in pw2Positions
             
+            
+            #flag
+            connectToWithinWindowOnly = true
+            if connectToWithinWindowOnly
+              if (pos - pos2).abs > 200
+                next
+              end
+            end
+              
+            
             #WRAP TEXT AND CALC SHORTER DISTANCE
             #wrapping text in circle and taking the shorter path around circle between two terms as the distance
             if wrapText
@@ -348,6 +358,8 @@ class GraphRank::Keywords < GraphRank::TextRank
               @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
             else
               @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
+              
+              
             end
               
             
