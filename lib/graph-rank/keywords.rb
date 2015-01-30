@@ -340,9 +340,17 @@ class GraphRank::Keywords < GraphRank::TextRank
             
             #this is the version where term weights are factored into edge weights, it's underperfing slighly
             #@ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor * termLengthFactor / Float((pos-pos2)).abs ** 2) #experimenting with power of two here
+          
+            #flag
+            noPositionFactor = true
             
+            if noPositionFactor
+              @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
+            else
+              @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
+            end
+              
             
-            @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
             if false #[ ]todo try this
               #reward a word for occuring in the vicinity of itself
               if pw['word'] == pw2['word'] and (pos-pos2).abs < 200
