@@ -15,6 +15,15 @@ class GraphRank::PageRank
     end
     @damping, @convergence, @max_it = damping, convergence, max_it
     @graph, @outlinks, @nodes, @weights = {}, {}, {}, {}
+    
+    #flags
+    @doPageRank = true
+    @doGravityRank = false
+    if @doGravityRank
+      puts('doing GRAVITY RANK')
+      @doPageRank = false
+      @max_it = 2
+    end
   end
 
   # Add a node to the graph.
@@ -56,7 +65,7 @@ class GraphRank::PageRank
       #puts("right before iteration")
       new_nodes = iteration
       #puts("right after iteration")
-      #printGraph new_nodes
+      #printGraph new_nodes #for debug
       done = convergence(new_nodes)
       @nodes = new_nodes
       @max_it -= 1
@@ -65,17 +74,30 @@ class GraphRank::PageRank
     @nodes.sort_by {|k,v|v}.reverse
   end
   
-  def printGraph new_nodes = nil
+  def printGraph new_nodes = nil, logFile = nil
+
       puts("printing graph:")
+      if not logFile.nil?
+        logFile.puts("printing graph:")
+      end
       @graph.each do |node,links|
           if not new_nodes.nil?  and new_nodes.has_key? node
             puts("#{node} (#{new_nodes[node]}) <- #{links}")
+            if not logFile.nil?
+              logFile.puts("#{node} (#{new_nodes[node]}) <- #{links}")
+            end
           else
             puts("#{node} <- #{links}")
+            if not logFile.nil?
+              logFile.puts("#{node} <- #{links}")
+            end
           end
           for link in links
             weight = @weights[link][node]
             puts("#{link} edge weight = #{weight}")
+            if not logFile.nil?
+              logFile.puts("#{link} edge weight = #{weight}")
+            end
           end
       end
       puts("--------------------")
@@ -90,9 +112,15 @@ class GraphRank::PageRank
     new_nodes = {}
     @graph.each do |node,links|
       #puts("node= #{node}, links = #{links}")
+      
       score = links.map do |id|
-        @nodes[id] / @outlinks[id] * @weights[id][node]
+        if @doPageRank
+          @nodes[id] / @outlinks[id] * @weights[id][node] #straight pagerank score
+        elsif @doGravityRank #do gravityRank
+          @nodes[id] * @weights[id][node] #not dividing by out link just like a planet's gravity is the same regardless of how many other planets are around it > note that maxt iter needs to be small for this as it wouldn't converge
+        end  
       end.inject(:+)
+      
       new_nodes[node] = (1-@damping/
       @nodes.size) + @damping * score
     end
@@ -102,7 +130,8 @@ class GraphRank::PageRank
   # Check for convergence.
   def convergence(current)
     diff = {}
-    @nodes.each do |k,v|      
+    @nodes.each do |k,v|
+      #puts("k = #{k}")      
       diff[k] = current[k] - @nodes[k]
     end
     total = 0.0

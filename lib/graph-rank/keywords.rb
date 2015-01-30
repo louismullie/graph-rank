@@ -278,12 +278,18 @@ class GraphRank::Keywords < GraphRank::TextRank
   def build_graph_cam phraseWeights, ngramPositions, idfHash, docLength, logFile
     puts("in build_graph_ind_occ ")
     
+    #flag
+    wrapText = false #[ ]todo get this working
+    if wrapText
+      logFile.puts('wrapping text in build_graph_cam')
+    end
+    
     #BUILD GRAPH
     for pw in phraseWeights
       for pw2 in phraseWeights
         
         #SKIP NEGATIVE WEIGHTS OR IF WORDS ARE THE SAME
-        if pw['weight'] <= 0 or pw2['weight'] <=0 # we check agains putting an edge between something and itself using positions so don't need this: or pw['word'] == pw2['word']
+        if pw['weight'] <= 0 or pw2['weight'] <=0 # optional: we check agains putting an edge between something and itself using positions so don't need this: or pw['word'] == pw2['word']
           next
         end
         
@@ -292,6 +298,19 @@ class GraphRank::Keywords < GraphRank::TextRank
 
         for pos in pwPositions
           for pos2 in pw2Positions
+            
+            #WRAP TEXT AND CALC SHORTER DISTANCE
+            #wrapping text in circle and taking the shorter path around circle between two terms as the distance
+            if wrapText
+              if (pos - pos2).abs > Float(docLength)/2.0
+                if pos > pos2
+                  pos = (docLength - pos) + pos2
+                elsif pos2 > pos
+                  pos2 = (docLength - pos2) + pos
+                end
+              end
+            end
+            #WRAP TEXT AND CALC SHORTER DISTANCE
             
             #check to see if your are not placing an edge from word withing the ngram to the ngram (which would have inifinite weight and is just conceptually wrong)
             if pos < pos2 and pos+pw['word'].split.size > pos2
@@ -322,9 +341,17 @@ class GraphRank::Keywords < GraphRank::TextRank
             #this is the version where term weights are factored into edge weights, it's underperfing slighly
             #@ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor * termLengthFactor / Float((pos-pos2)).abs ** 2) #experimenting with power of two here
             
-            #this is the version where edge weights are based on average position of terms from document start and their distance and term weights are passed in as initial weights of each node
-            @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
             
+            @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
+            if false #[ ]todo try this
+              #reward a word for occuring in the vicinity of itself
+              if pw['word'] == pw2['word'] and (pos-pos2).abs < 200
+                @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
+              else
+                #this is the version where edge weights are based on average position of terms from document start and their distance and term weights are passed in as initial weights of each node
+                @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
+              end
+            end
           end
         end
         
@@ -332,7 +359,8 @@ class GraphRank::Keywords < GraphRank::TextRank
     end
     #BUILD GRAPH
     
-    logFile.puts("camRerank graph = #{@ranking.printGraph}")
+    
+    #@ranking.printGraph nil, logFile #for debug
     puts('graph is built in build_graph_cam, going to calculate pagerank')
     
     result = @ranking.calculate
@@ -459,7 +487,7 @@ class GraphRank::Keywords < GraphRank::TextRank
     end
 
     logFile.puts("textRerank graph = #{@ranking.printGraph}")
-    puts("just printed the graph, going to calculate ...")
+    puts("just camed the graph, going to calculate ...")
     result = @ranking.calculate
     return result
   end
@@ -490,7 +518,7 @@ class GraphRank::Keywords < GraphRank::TextRank
           end
       end
     
-    @ranking.printGraph
+    #@ranking.printGraph
   end
 
 end
