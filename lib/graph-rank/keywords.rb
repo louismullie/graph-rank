@@ -301,7 +301,7 @@ class GraphRank::Keywords < GraphRank::TextRank
             
             
             #flag
-            connectToWithinWindowOnly = true
+            connectToWithinWindowOnly = false #todo try it
             if connectToWithinWindowOnly
               if (pos - pos2).abs > 200
                 next
@@ -355,7 +355,15 @@ class GraphRank::Keywords < GraphRank::TextRank
             noPositionFactor = true
             
             if noPositionFactor
-              @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
+              #Best So Far .1 improve over 5 gram best baseline >> @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
+              # no go >> @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", 1.0 / Float((pos-pos2).abs), pw['weight'], pw2['weight']) #try without wordWeights in edges, just distance
+              
+              #log decay the distance 
+              logDist = Math.log(1500.0 / Float((pos-pos2).abs))
+              if logDist <= 0
+                next
+              end  
+              @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * logDist , pw['weight'], pw2['weight'])
             else
               @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
               
