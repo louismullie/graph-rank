@@ -16,13 +16,13 @@ class GraphRank::PageRank
     @damping, @convergence, @max_it = damping, convergence, max_it
     @graph, @outlinks, @nodes, @weights = {}, {}, {}, {}
     
-    #flags
+    #flags make sure one of these two is true the other false
     @doPageRank = true
-    @doGravityRank = false
+    @doGravityRank = false #underperfs, philosophy: don't divide by num outoing links just like sun's gravity isn't divided by num planets rotating it, but i think in this case it allows a bunch of unimportant unigrams that have high scores because they are keyphrase fragments to support eachother into top posiions, reducing accuracy, just a theory though
     if @doGravityRank
       puts('doing GRAVITY RANK')
       @doPageRank = false
-      @max_it = 2
+      @max_it = 20
     end
   end
 
@@ -52,11 +52,38 @@ class GraphRank::PageRank
     @weights[source] ||= {}
     @weights[source][dest] = weight
   end
+  
+  
+  #ensures that all nodes' outgoing edge weights sum to 1
+  def normalizeNodeEdgeWeights
+    @weights.each do |source, destinatins|
+      weightsSum = 0.0
+      
+      #get sum of edge weights pointing out of this node
+      destinatins.each do |dest, edgeWeight|
+        weightsSum += edgeWeight
+      end
+      
+      #divide each edge by sum of edge weights
+      destinatins.each do |dest, edgeWeight|
+        @weights[source][dest] /= weightsSum
+      end
+      
+    end
+    
+  end
 
   # Iterates the PageRank algorithm
   # until convergence is reached.
   def calculate
     puts("in page_rank#calculate")
+    
+    if false
+      puts("NORMALIZING EDGE WEIGHTS")
+      normalizeNodeEdgeWeights
+    end
+    
+    
     done = false
     numiterations = 0
     until done

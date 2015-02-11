@@ -276,7 +276,7 @@ class GraphRank::Keywords < GraphRank::TextRank
   #graph where individual occurrences of words are nodes
   #note, weights have to be normalized (i.e. smaller than 1) or it wouldn't coverge
   def build_graph_cam phraseWeights, ngramPositions, idfHash, docLength, logFile
-    puts("in build_graph_ind_occ ")
+    puts("in build_graph_cam ")
     
     #flag
     wrapText = false #[ ]todo get this working
@@ -289,7 +289,7 @@ class GraphRank::Keywords < GraphRank::TextRank
       for pw2 in phraseWeights
         
         #SKIP NEGATIVE WEIGHTS OR IF WORDS ARE THE SAME
-        if pw['weight'] <= 0 or pw2['weight'] <=0 # optional: we check agains putting an edge between something and itself using positions so don't need this: or pw['word'] == pw2['word']
+        if pw['weight'] <= 0 or pw2['weight'] <=0 or pw['word'] == pw2['word']# optional: we check agains putting an edge between something and itself using positions so don't need this: or pw['word'] == pw2['word']
           next
         end
         
@@ -364,6 +364,7 @@ class GraphRank::Keywords < GraphRank::TextRank
                 next
               end  
               @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * logDist , pw['weight'], pw2['weight'])
+              # underperfs with no product of weights in edge : @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", logDist , pw['weight'], pw2['weight'])
             else
               @ranking.add( "#{pw['word']}__#{pos}", "#{pw2['word']}__#{pos2}", (pw['weight']*pw2['weight']) * positionFactor  / Float((pos-pos2).abs), pw['weight'], pw2['weight'])
               
@@ -410,6 +411,7 @@ class GraphRank::Keywords < GraphRank::TextRank
         end
         weight = 0.0
         
+        puts("pw weight = #{pw['weight']}, pw2 = #{pw2['weight']}")
         #logFile.puts("pw = #{pw['word']}, pw2 = #{pw2['word']}")
         
         #calculate the number of times these phrases occur within a certain didstance d
@@ -423,14 +425,15 @@ class GraphRank::Keywords < GraphRank::TextRank
           
 
           topicRankDist = 0.0
+          logDistSum = 0.0
+          numLogDistCoocs = 0.0
           for pos in pwPositions
             for pos2 in pw2Positions
               
-              ###CALC DISTANCE TOPICRANK WAY###
-              topicRankDist = topicRankDist +  1.0 / (pos - pos2).abs * Float(pw['weight'] + pw2['weight']) / 2
-              ###CALC DISTANCE TOPICRANK WAY###
+
               
-              #check to see if your are not counting a cooc with a word withing the ngram
+              
+              #check to see if your are not counting a cooc with a word within the ngram
               if pos < pos2 and pos+pw['word'].split.size > pos2
                 next
               elsif pos2 < pos and pos2+pw2['word'].split.size > pos
@@ -451,10 +454,37 @@ class GraphRank::Keywords < GraphRank::TextRank
               #if (pos - pos2).abs < d
               #  numCoocs = numCoocs + 1
               #end
+              
+                            #flase
+              if false
+                ###CALC DISTANCE TOPICRANK WAY###
+                topicRankDist = topicRankDist +  1.0 / (pos - pos2).abs * Float(pw['weight'] + pw2['weight']) / 2
+                ###CALC DISTANCE TOPICRANK WAY###
+              end
+              
+         ##############LOG DIST ############     
+              #flag
+              doLogDist = true
+              if doLogDist
+                ### CALC DISTANCE USING MY LOGDIST WAY THAT SHOWS POSITIVE RESULTS IN build_graph_cam
+                windowSize = 1500
+                
+                if (pos-pos2).abs < windowSize
+                  logDistSum = logDistSum +  Math.log(windowSize / Float((pos-pos2).abs))
+                  numLogDistCoocs += 1
+                end
+                ### CALC DISTANCE USING MY LOGDIST WAY THAT SHOWS POSITIVE RESULTS IN build_graph_cam
+              end
+              
             end
           end
           #straigh cooc count
           #weight = numCoocs
+          
+          if doLogDist
+            weight = Float(logDistSum) / Float(numLogDistCoocs)
+          end
+          ##############LOG DIST ############
           
           #jaccard
           #weight = Float(numCoocs) / ( Float(ngramPositions[pw['word']].size) + Float(ngramPositions[pw2['word']].size) ) / 100
@@ -462,9 +492,10 @@ class GraphRank::Keywords < GraphRank::TextRank
           #straight num cooks
           #weight = Float(numCoocs) / 100
           
-          weight = termFreq[pw['word']] * termFreq[pw2['word']] * topicRankDist / 100
+          #USING TOPIC RANK DIST
+          #weight = termFreq[pw['word']] * termFreq[pw2['word']] * topicRankDist / 100 > underperf
           
-          if boostJaccardByTermLenghsSum
+          if boostJaccardByTermLenghsSum and false
             #jaccard phrase length boosted
             weight = weight * Float(pw['word'].split.size + pw2['word'].split.size)
           end
@@ -500,14 +531,15 @@ class GraphRank::Keywords < GraphRank::TextRank
         if weight > 0  
           #use constant weight
           #@ranking.add(pw["word"], pw2["word"], 1.0)
-
+          
           #weights greater than one cause divergence and infinity weights that break things
-          if weight > 1
+          if false and  weight > 1
             weight = 1
           end
           
-          
-          @ranking.add(pw["word"], pw2["word"], weight)
+          #@ranking.add(pw["word"], pw2["word"], weight)
+          puts("adding weight = #{weight}, termWeight = #{pw['weight']} and pw2['weight'] = #{pw2['weight']}")
+          @ranking.add(pw["word"], pw2["word"], weight * (pw['weight']*pw2['weight']), pw["weight"], pw2["weight"])
         end
         #add edge to graph
         
