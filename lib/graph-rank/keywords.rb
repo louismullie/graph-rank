@@ -427,6 +427,7 @@ class GraphRank::Keywords < GraphRank::TextRank
           topicRankDist = 0.0
           logDistSum = 0.0
           numLogDistCoocs = 0.0
+          numTopicRankDists = 0.0
           for pos in pwPositions
             for pos2 in pw2Positions
               
@@ -455,11 +456,18 @@ class GraphRank::Keywords < GraphRank::TextRank
               #  numCoocs = numCoocs + 1
               #end
               
-                            #flase
-              if false
-                ###CALC DISTANCE TOPICRANK WAY###
-                topicRankDist = topicRankDist +  1.0 / (pos - pos2).abs * Float(pw['weight'] + pw2['weight']) / 2
-                ###CALC DISTANCE TOPICRANK WAY###
+              #flag
+              doTopicRankDist = false              #flase
+              if doTopicRankDist
+                
+                windowSize = 1500
+                
+                if (pos - pos2).abs < windowSize #otherwise it remains zero
+                  numTopicRankDists += 1
+                  ###CALC DISTANCE TOPICRANK WAY###
+                  topicRankDist = topicRankDist +  1.0 / (pos - pos2).abs
+                  ###CALC DISTANCE TOPICRANK WAY###
+                end
               end
               
          ##############LOG DIST ############     
@@ -482,7 +490,14 @@ class GraphRank::Keywords < GraphRank::TextRank
           #weight = numCoocs
           
           if doLogDist
+            #NORMAL CASE
             weight = Float(logDistSum) / Float(numLogDistCoocs)
+            
+            #experimental
+            #weight = Float(logDistSum) * Float(numLogDistCoocs) #very bad underperf
+            #experimental very bad perf
+            #weight = Float(logDistSum) * Float(numLogDistCoocs) / (termFreq[pw['word']] + termFreq[pw2['word']] - numLogDistCoocs)
+            
           end
           ##############LOG DIST ############
           
@@ -493,7 +508,14 @@ class GraphRank::Keywords < GraphRank::TextRank
           #weight = Float(numCoocs) / 100
           
           #USING TOPIC RANK DIST
-          #weight = termFreq[pw['word']] * termFreq[pw2['word']] * topicRankDist / 100 > underperf
+          if doTopicRankDist
+            #take the sum of weights
+            #weight =  Float(topicRankDist)
+            
+            
+            #take average
+            weight =  Float(topicRankDist) / Float(numTopicRankDists)
+          end
           
           if boostJaccardByTermLenghsSum and false
             #jaccard phrase length boosted
@@ -538,8 +560,13 @@ class GraphRank::Keywords < GraphRank::TextRank
           end
           
           #@ranking.add(pw["word"], pw2["word"], weight)
-          puts("adding weight = #{weight}, termWeight = #{pw['weight']} and pw2['weight'] = #{pw2['weight']}")
+          #puts("adding weight = #{weight}, termWeight = #{pw['weight']} and pw2['weight'] = #{pw2['weight']}")
+          
+          #NORMAL CASE
           @ranking.add(pw["word"], pw2["word"], weight * (pw['weight']*pw2['weight']), pw["weight"], pw2["weight"])
+          
+          #TRYING DIRECTIONAL EDGES > slight underperf
+          #@ranking.add(pw["word"], pw2["word"], weight * pw2['weight'], pw["weight"], pw2["weight"])
         end
         #add edge to graph
         

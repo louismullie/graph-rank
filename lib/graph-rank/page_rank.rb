@@ -78,7 +78,9 @@ class GraphRank::PageRank
   def calculate
     puts("in page_rank#calculate")
     
-    if false
+    #flag: if set to true, a node's edge weights are divided by the sum of its edge weights
+    @normalizeEdgeWeight = true
+    if true
       puts("NORMALIZING EDGE WEIGHTS")
       normalizeNodeEdgeWeights
     end
@@ -142,7 +144,12 @@ class GraphRank::PageRank
       
       score = links.map do |id|
         if @doPageRank
-          @nodes[id] / @outlinks[id] * @weights[id][node] #straight pagerank score
+          if @normalizeEdgeWeight
+            #if we've already normalized edge weights there is no need to divide by the number of edges, dividing by the number of edge IS the normalization when all edges have weight 1.
+            @nodes[id] * @weights[id][node]
+          else
+            @nodes[id] / @outlinks[id] * @weights[id][node] #straight pagerank score
+          end
         elsif @doGravityRank #do gravityRank
           @nodes[id] * @weights[id][node] #not dividing by out link just like a planet's gravity is the same regardless of how many other planets are around it > note that maxt iter needs to be small for this as it wouldn't converge
         end  
