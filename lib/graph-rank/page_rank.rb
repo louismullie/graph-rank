@@ -6,7 +6,7 @@ class GraphRank::PageRank
   # Initialize with default damping and convergence.
   # A maximum number of iterations can also be supplied
   # (default is no maximum, i.e. iterate until convergence).
-  def initialize(damping=nil, convergence=nil, max_it=20)
+  def initialize(damping=nil, convergence=nil, max_it=100)
     damping ||= 0.85; convergence ||= 0.00000000000000000000000001
     if damping <= 0 or damping > 1
       raise 'Invalid damping factor.'
@@ -30,7 +30,7 @@ class GraphRank::PageRank
   def add(source, dest, weight=1.0, sourcePriorWeight = 0.15, destPriorWeight = 0.15)
     
     #flag
-    @allowSelfEdges = true
+    @allowSelfEdges = false
     #flag
     
     if not @allowSelfEdges
@@ -89,6 +89,7 @@ class GraphRank::PageRank
     done = false
     numiterations = 0
     until done
+      #printNodeWeights numiterations
       numiterations += 1      
       break if @max_it == 0
       #puts("right before iteration")
@@ -101,6 +102,17 @@ class GraphRank::PageRank
     end
     puts("numiterations = #{numiterations}")
     @nodes.sort_by {|k,v|v}.reverse
+  end
+  
+  def printNodeWeights  iterationNum
+    $logFile.puts("printing node weights for iteration #{iterationNum}")
+    @nodes.each do |k,v|
+      #puts("k = #{k}") 
+      if not $logFile.nil?     
+        $logFile.puts "weight for #{k} = #{v}"
+      end
+      puts "weight for #{k} = #{v}"
+    end
   end
   
   def printGraph new_nodes = nil, logFile = nil
@@ -144,7 +156,7 @@ class GraphRank::PageRank
       
       score = links.map do |id|
         if @doPageRank
-          if @normalizeEdgeWeight
+          if @normalizeEdgeWeight #and false
             #if we've already normalized edge weights there is no need to divide by the number of edges, dividing by the number of edge IS the normalization when all edges have weight 1.
             @nodes[id] * @weights[id][node]
           else

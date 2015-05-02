@@ -16,7 +16,7 @@
 # text = String.new(tr.hulth1939)
 #tr.run(text).inspect
 # and if you make changes the load './whateverfileInGraph-rankFoler.rb'
-
+  
 require 'engtagger'
 require 'stopwords'
 
@@ -403,15 +403,27 @@ class GraphRank::Keywords < GraphRank::TextRank
   #option one: place links between terms that have one word in common
   def build_rerank_graph phraseWeights, termFreq, idf, ngramPositions, boostJaccardByTermLenghsSum,  logFile, windowSize = 10
     puts("in build_rerenk_graph.")
+    $logFile = logFile
+    
+    windowSize = 1500
     #option one
     for pw in phraseWeights
       for pw2 in phraseWeights
-        if pw['weight'] <= 0 or pw2['weight'] <=0
+        if pw['weight'] <= 0 or pw2['weight'] <=0 
           next
         end
+        
+        
         weight = 0.0
         
-        puts("pw weight = #{pw['weight']}, pw2 = #{pw2['weight']}")
+        #looping self edge to take into account term's weight in pageRank, lead to downperf on hulth
+        if false and pw['word'] == pw2['word'] 
+          @ranking.add(pw["word"], pw2["word"], Math.log(windowSize) * pw2['weight'], pw["weight"], pw2["weight"])
+          next
+        end
+
+        
+        #puts("pw weight = #{pw['weight']}, pw2 = #{pw2['weight']}")
         #logFile.puts("pw = #{pw['word']}, pw2 = #{pw2['word']}")
         
         #calculate the number of times these phrases occur within a certain didstance d
@@ -452,15 +464,15 @@ class GraphRank::Keywords < GraphRank::TextRank
                 next
               end
               #replacing this with ^
-              #if (pos - pos2).abs < d
-              #  numCoocs = numCoocs + 1
-              #end
+              if (pos - pos2).abs < 100
+                numCoocs = numCoocs + 1
+              end
               
               #flag
               doTopicRankDist = false              #flase
               if doTopicRankDist
                 
-                windowSize = 1500
+                
                 
                 if (pos - pos2).abs < windowSize #otherwise it remains zero
                   numTopicRankDists += 1
@@ -486,8 +498,18 @@ class GraphRank::Keywords < GraphRank::TextRank
               
             end
           end
+
+          #COOCURRENCE COUNT BASED NO DISTANCE BASED EDGE WEIGHTNG
           #straigh cooc count
           #weight = numCoocs
+          
+          #positional portion of edge weight as 1 if cooc otherwise zero
+          if false and numCoocs > 0
+            weight = 1
+          else
+            weight = 0
+          end
+          #COOCURRENCE COUNT BASED NO DISTANCE BASED EDGE WEIGHTNG
           
           if doLogDist
             #NORMAL CASE
@@ -563,10 +585,16 @@ class GraphRank::Keywords < GraphRank::TextRank
           #puts("adding weight = #{weight}, termWeight = #{pw['weight']} and pw2['weight'] = #{pw2['weight']}")
           
           #NORMAL CASE
-          @ranking.add(pw["word"], pw2["word"], weight * (pw['weight']*pw2['weight']), pw["weight"], pw2["weight"])
+          #@ranking.add(pw["word"], pw2["word"], weight * (pw['weight']*pw2['weight']), pw["weight"], pw2["weight"])
           
-          #TRYING DIRECTIONAL EDGES > slight underperf
+          #Not adding initial word weights, for measurement purposes of effectiveness of feature
+          @ranking.add(pw["word"], pw2["word"], weight * (pw['weight']*pw2['weight']))
+          
+          #TRYING DIRECTIONAL EDGES > 
+          #edge weight is the weight of the destintion node > slight downperf
           #@ranking.add(pw["word"], pw2["word"], weight * pw2['weight'], pw["weight"], pw2["weight"])
+          #edge weight is the weight of the source node, huge downperf, cuz traveller will be leaving high score notes and rarely coming back from lower score nodes
+          #@ranking.add(pw["word"], pw2["word"], weight * pw['weight'], pw["weight"], pw2["weight"])
         end
         #add edge to graph
         
