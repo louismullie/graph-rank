@@ -2,6 +2,8 @@
 # a large-scale hypertextual Web search engine". 
 # Computer Networks and ISDN Systems 30: 107–117.
 class GraphRank::PageRank
+  
+  attr_accessor :graph, :outlinks, :nodes, :weights
 
   # Initialize with default damping and convergence.
   # A maximum number of iterations can also be supplied
@@ -142,6 +144,29 @@ class GraphRank::PageRank
           end
       end
       puts("--------------------")
+  end
+  
+  
+  
+  #combines the passed in PageRank object with this one
+  #how? combines any common nodes between the two graphs into one 
+  # whose weight is the sum of the two node's weights. The combined 
+  # node will have all the edges of the preivous two nodes ([ ] to re-normalize the combined edges or not is the questoin )
+  def combineGraphs( otherPageRankInstance )
+    
+    
+    # do the two graphs have any common nodes? V
+    @graph.each do |node, incomingNodes|
+      if otherPageRankInstance.graph.has_key? node
+        #combine common nodes V
+        
+        #combine common nodes ^
+      end
+    end
+      
+    # do the two graphs have any common nodes? ^
+    
+    return self
   end
 
   private

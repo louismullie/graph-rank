@@ -15,7 +15,7 @@
 #tr.run(someInputText).inspect e.g. :
 # text = String.new(tr.hulth1939)
 #tr.run(text).inspect
-# and if you make changes the load './whateverfileInGraph-rankFoler.rb'
+# and if you make changes then load './whateverfileInGraph-rankFolder.rb'
   
 require 'engtagger'
 require 'stopwords'
