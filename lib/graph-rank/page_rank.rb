@@ -167,9 +167,11 @@ class GraphRank::PageRank
     
     #add edges
     linksArr = Array.new
-    @weights.each do |node1, node2|
-      #e.g. node1 = us senate, node2 = {"budget"=>1.0}=
-      linksArr << {"source" => nodeNameToIndexInNodeArr_map[node1], "target" => nodeNameToIndexInNodeArr_map[node2.keys[0]]}
+    @weights.each do |node1, nodeWeightHash|
+      #e.g. {"obama"=>{"foreign policy"=>1.0, "oil"=>1.0}
+      nodeWeightHash.each do |node, edgeWeight|
+        linksArr << {"source" => nodeNameToIndexInNodeArr_map[node1], "target" => nodeNameToIndexInNodeArr_map[node]}#[node2.keys[0]]}
+      end
     end
     
     return {"nodes" => nodesArr, "links" => linksArr}.to_json
@@ -220,7 +222,7 @@ class GraphRank::PageRank
         end
         #combine common nodes ^
         
-      #not commong node: node that is in the second graph but not the first one
+      #not common node: node that is in the second graph but not the first one
       else
         
         self.graph[node_n] = Array.new
