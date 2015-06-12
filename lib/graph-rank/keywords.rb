@@ -4,10 +4,10 @@
 #HOW TO BUILD GEM
 #in outer graph-rank dir
 #gem build graph-rank.gemspec
-#gem install ./graph-rank.<version>.gem
+#gem install ./graph-rank.<version>.gem e.g. gem install ./graph-rank-0.0.3.gem
 
 #HOW TO RUN
-#if you wanna update and reload the files inside graph-rank folder you can go to graph-rank folder then do 
+#if you wanna update and reload the files inside graph-rank folder you can go to the inner graph-rank folder (e.g. /Users/soheil.danesh/GitHub/graph-rank/lib/graph-rank) then do 
 #load '../graph-rank.rb' #load from the parent dir
 #for some reason have to do a load './keywords.rb' for my changes in the file to take effect
 #now you can do
