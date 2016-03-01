@@ -1,4 +1,4 @@
-$:.push File.expand_path('../lib', __FILE__)
+$:.push File.expand_path('../lib', __FILE__) #What does this do? expand ruby's path ($) with a lib dir in current file's dir so stuff in it can be required : http://stackoverflow.com/questions/10372880/what-does-push-do-in-ruby
 
 require 'graph-rank'
 

@@ -604,17 +604,14 @@ class GraphRank::Keywords < GraphRank::TextRank
     logFile.puts("textRerank graph = #{@ranking.printGraph}")
     puts("just camed the graph, going to calculate ...")
     result = @ranking.calculate
-    return result
+    return {rankedTermsList: result, graph: @ranking}
   end
   
   # Build the co-occurence graph for an n-gram.
   def build_graph
       text = @text.gsub(/[^a-z|-| ]/, ' * ')
       text = text.gsub!(/\s+/, " ").strip.downcase #multi spaces into 1
-      
 
-
-      
       words = text.split " "
       words.delete_if {|word| Stopwords.is? word }
       

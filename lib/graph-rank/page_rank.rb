@@ -28,7 +28,7 @@ class GraphRank::PageRank
     end
   end
 
-  # Add a node to the graph.
+  # Add two nodes and edge weight between them  to the graph. with optional initla weights for the nodes
   def add(source, dest, weight=1.0, sourcePriorWeight = 0.15, destPriorWeight = 0.15)
     
     #flag
@@ -165,14 +165,36 @@ class GraphRank::PageRank
       i += 1
     end
     
-    #add edges
+    #add edges V #####
+    linksArrWithWeights = Array.new
     linksArr = Array.new
+    
+    
+    #select the top 1000 edges by weight
     @weights.each do |node1, nodeWeightHash|
       #e.g. {"obama"=>{"foreign policy"=>1.0, "oil"=>1.0}
       nodeWeightHash.each do |node, edgeWeight|
-        linksArr << {"source" => nodeNameToIndexInNodeArr_map[node1], "target" => nodeNameToIndexInNodeArr_map[node]}#[node2.keys[0]]}
+        linksArrWithWeights << {"source" => nodeNameToIndexInNodeArr_map[node1], "target" => nodeNameToIndexInNodeArr_map[node], "edgeWeight" => edgeWeight}#[node2.keys[0]]}
       end
     end
+    linksArrWithWeights.sort!{|x,y| y["weight"] <=> x["weight"]}
+    #linksArrWithWeights.first(1000)
+    
+    for edgeWeight in linksArrWithWeights
+      linksArr << {"source" => edgeWeight["source"], "target" => edgeWeight["target"], "edgeWeight" => edgeWeight["edgeWeight"]} #include edge weight here, it will be used to weight individual edges in the graph as in http://stackoverflow.com/questions/16567750/does-d3-js-force-layout-allow-dynamic-linkdistance
+    end
+    #select the top 1000 edges by weight ^
+    
+    
+    
+    #USING linksArrWithWeights above for this
+    #@weights.each do |node1, nodeWeightHash|
+    #  #e.g. {"obama"=>{"foreign policy"=>1.0, "oil"=>1.0}
+    #  nodeWeightHash.each do |node, edgeWeight|
+    #    linksArr << {"source" => nodeNameToIndexInNodeArr_map[node1], "target" => nodeNameToIndexInNodeArr_map[node]}#[node2.keys[0]]}
+    #  end
+    #end
+    #add edges ^ #####
     
     return {"nodes" => nodesArr, "links" => linksArr}.to_json
   end
