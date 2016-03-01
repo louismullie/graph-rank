@@ -1,6 +1,7 @@
 # Implement the PageRank algorithm
 # for unsupervised keyword extraction.
 
+#TODO investigate changing the cam gem file so bundle install knows which github repo (i.e. mine) to grab this gem from, that way we have the options of actually getting the gem if I move to a new machine or generally in addition to building it lcoally
 #HOW TO BUILD GEM
 #in outer graph-rank dir
 #gem build graph-rank.gemspec
@@ -402,11 +403,11 @@ class GraphRank::Keywords < GraphRank::TextRank
   #this method build a graph that will be used to rerank them. termFreq and idf arguments passed in determine the weighting scheme (if one nil the other is used, if both not nil tf.idf is used)
   #option one: place links between terms that have one word in common
   def build_rerank_graph phraseWeights, termFreq, idf, ngramPositions, boostJaccardByTermLenghsSum,  logFile, windowSize = 10
-    puts("in build_rerenk_graph.")
+    puts("in build_rerenk_graph. working on personalized pagerank branch")
     $logFile = logFile
     
     windowSize = 1500
-    #option one
+
     for pw in phraseWeights
       for pw2 in phraseWeights
         if pw['weight'] <= 0 or pw2['weight'] <=0 
@@ -465,7 +466,7 @@ class GraphRank::Keywords < GraphRank::TextRank
               end
               #replacing this with ^
               if (pos - pos2).abs < 100
-                numCoocs = numCoocs + 1
+                numCoocs = numCoocs + 1 #TODO should i comment this out??
               end
               
               #flag
@@ -482,7 +483,6 @@ class GraphRank::Keywords < GraphRank::TextRank
                 end
               end
               
-         ##############LOG DIST ############     
               #flag
               doLogDist = true
               if doLogDist
@@ -498,28 +498,10 @@ class GraphRank::Keywords < GraphRank::TextRank
               
             end
           end
-
-          #COOCURRENCE COUNT BASED NO DISTANCE BASED EDGE WEIGHTNG
-          #straigh cooc count
-          #weight = numCoocs
-          
-          #positional portion of edge weight as 1 if cooc otherwise zero
-          if false and numCoocs > 0
-            weight = 1
-          else
-            weight = 0
-          end
-          #COOCURRENCE COUNT BASED NO DISTANCE BASED EDGE WEIGHTNG
           
           if doLogDist
             #NORMAL CASE
-            weight = Float(logDistSum) / Float(numLogDistCoocs)
-            
-            #experimental
-            #weight = Float(logDistSum) * Float(numLogDistCoocs) #very bad underperf
-            #experimental very bad perf
-            #weight = Float(logDistSum) * Float(numLogDistCoocs) / (termFreq[pw['word']] + termFreq[pw2['word']] - numLogDistCoocs)
-            
+            weight = Float(logDistSum) / Float(numLogDistCoocs)  
           end
           ##############LOG DIST ############
           
@@ -530,44 +512,13 @@ class GraphRank::Keywords < GraphRank::TextRank
           #weight = Float(numCoocs) / 100
           
           #USING TOPIC RANK DIST
-          if doTopicRankDist
-            #take the sum of weights
-            #weight =  Float(topicRankDist)
-            
-            
+          if doTopicRankDist 
             #take average
             weight =  Float(topicRankDist) / Float(numTopicRankDists)
           end
           
-          if boostJaccardByTermLenghsSum and false
-            #jaccard phrase length boosted
-            weight = weight * Float(pw['word'].split.size + pw2['word'].split.size)
-          end
-          #PHRASE COOC COUNT EDGE WEIGHTING
-        else
-          #SHARED TOKEN BASED EDGE WEIGHITNG
-          #calcualte weight between terms based on common space-separated tokens and their inverse term freq
-          for token in pw['word'].split(" ")
-            for token2 in pw2['word'].split(" ")
-              #logFile.puts("before token == token2 token = #{token} and token2 = #{token2} ")
-              if token == token2
-                if not termFreq.nil? and not idf.nil?
-                  weight = weight + Float(termFreq[token])*idf[token]  / 1000.0
-                elsif not termFreq.nil?
-                  weight = weight + (1.0 / Float(termFreq[token])) / 1000.0
-                elsif not idf.nil?
-                  weight = weight + idf[token] / 1000.0
-                else
-                  weight = weight + 1.0 / (pw2['word'].split(" ").size + pw['word'].split(" ").size)
-                end
-                
-                #logFile.puts "adding connection between pw = #{pw['word']}, pw2 = #{pw2['word']}, weight = #{weight}"
-              end
-            end
-            #SHARED TOKEN BASED WEIGHITNG
-          end
         end
-        #calcualte weight between terms based on common space-separated tokens and their inverse term freq
+        
 
 
         #logFile.puts(" edge beween #{pw["word"]} -> #{pw2["word"]}, weight = #{weight}")
@@ -576,25 +527,16 @@ class GraphRank::Keywords < GraphRank::TextRank
           #use constant weight
           #@ranking.add(pw["word"], pw2["word"], 1.0)
           
-          #weights greater than one cause divergence and infinity weights that break things
+        
           if false and  weight > 1
             weight = 1
           end
           
-          #@ranking.add(pw["word"], pw2["word"], weight)
-          #puts("adding weight = #{weight}, termWeight = #{pw['weight']} and pw2['weight'] = #{pw2['weight']}")
           
-          #NORMAL CASE
-          #@ranking.add(pw["word"], pw2["word"], weight * (pw['weight']*pw2['weight']), pw["weight"], pw2["weight"])
           
           #Not adding initial word weights, for measurement purposes of effectiveness of feature
           @ranking.add(pw["word"], pw2["word"], weight * (pw['weight']*pw2['weight']))
-          
-          #TRYING DIRECTIONAL EDGES > 
-          #edge weight is the weight of the destintion node > slight downperf
-          #@ranking.add(pw["word"], pw2["word"], weight * pw2['weight'], pw["weight"], pw2["weight"])
-          #edge weight is the weight of the source node, huge downperf, cuz traveller will be leaving high score notes and rarely coming back from lower score nodes
-          #@ranking.add(pw["word"], pw2["word"], weight * pw['weight'], pw["weight"], pw2["weight"])
+
         end
         #add edge to graph
         
