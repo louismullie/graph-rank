@@ -402,11 +402,16 @@ class GraphRank::Keywords < GraphRank::TextRank
   #input is an array consisting of phrases and their weights [{"word" => phrase, "weight" => itsWeight}]
   #this method build a graph that will be used to rerank them. termFreq and idf arguments passed in determine the weighting scheme (if one nil the other is used, if both not nil tf.idf is used)
   #option one: place links between terms that have one word in common
-  def build_rerank_graph phraseWeights, termFreq, idf, ngramPositions, boostJaccardByTermLenghsSum,  logFile, windowSize = 10
+  def build_rerank_graph phraseWeights,  ngramPositions, options
     puts("in build_rerenk_graph. working on personalized pagerank branch")
-    $logFile = logFile
     
-    windowSize = 1500
+
+    @logFile = options['logFile']
+    windowSize = options['windowSize'] || 1500
+
+    textRankStyleEdgeWeighting = options['textRankStyleEdgeWeighting'] || false
+    doTopicRankDist = options['doTopicRankDist'] || false
+    doLogDist = true
 
     for pw in phraseWeights
       for pw2 in phraseWeights
@@ -414,18 +419,12 @@ class GraphRank::Keywords < GraphRank::TextRank
           next
         end
         
-        
         weight = 0.0
         
-        #looping self edge to take into account term's weight in pageRank, lead to downperf on hulth
-        if false and pw['word'] == pw2['word'] 
-          @ranking.add(pw["word"], pw2["word"], Math.log(windowSize) * pw2['weight'], pw["weight"], pw2["weight"])
-          next
+        # shouldn't we skip placing edge between the term and itself?
+        if pw['word'] == pw2['word'] 
+          next # though we never seem to hit this - not sure what's going on here.
         end
-
-        
-        #puts("pw weight = #{pw['weight']}, pw2 = #{pw2['weight']}")
-        #logFile.puts("pw = #{pw['word']}, pw2 = #{pw2['word']}")
         
         #calculate the number of times these phrases occur within a certain didstance d
         if not ngramPositions.nil?
@@ -438,15 +437,15 @@ class GraphRank::Keywords < GraphRank::TextRank
           
 
           topicRankDist = 0.0
+          numTopicRankDists = 0.0
+          
           logDistSum = 0.0
           numLogDistCoocs = 0.0
-          numTopicRankDists = 0.0
+          
+          # V CALCUALTE EDGE WEIGHT BETWEEN TWO TERMS BASED ON THEIR POSITIONS OF OCCURENCE AND THEIR DISTANCES
           for pos in pwPositions
             for pos2 in pw2Positions
-              
 
-              
-              
               #check to see if your are not counting a cooc with a word within the ngram
               if pos < pos2 and pos+pw['word'].split.size > pos2
                 next
@@ -464,17 +463,14 @@ class GraphRank::Keywords < GraphRank::TextRank
               elsif pos == pos2
                 next
               end
-              #replacing this with ^
-              if (pos - pos2).abs < 100
-                numCoocs = numCoocs + 1 #TODO should i comment this out??
+
+
+              #DOING CALCULATIONS FOR DIFFERENT EDGE WEIGHTING STRATEGIES#
+              if textRankStyleEdgeWeighting and (pos - pos2).abs < 100
+                numCoocs = numCoocs + 1
               end
               
-              #flag
-              doTopicRankDist = false              #flase
               if doTopicRankDist
-                
-                
-                
                 if (pos - pos2).abs < windowSize #otherwise it remains zero
                   numTopicRankDists += 1
                   ###CALC DISTANCE TOPICRANK WAY###
@@ -484,7 +480,7 @@ class GraphRank::Keywords < GraphRank::TextRank
               end
               
               #flag
-              doLogDist = true
+              
               if doLogDist
                 ### CALC DISTANCE USING MY LOGDIST WAY THAT SHOWS POSITIVE RESULTS IN build_graph_cam
                 windowSize = 1500
@@ -495,24 +491,25 @@ class GraphRank::Keywords < GraphRank::TextRank
                 end
                 ### CALC DISTANCE USING MY LOGDIST WAY THAT SHOWS POSITIVE RESULTS IN build_graph_cam
               end
-              
+              #DOING CALCULATIONS FOR DIFFERENT EDGE WEIGHTING STRATEGIES#
+
             end
           end
+          # ^ CALCUALTE EDGE WEIGHT BETWEEN TWO TERMS BASED ON THEIR POSITIONS OF OCCURENCE AND THEIR DISTANCES
           
+          #NORMAL CASE - USING LOG DIST EDGE WEIGHTING
           if doLogDist
-            #NORMAL CASE
             weight = Float(logDistSum) / Float(numLogDistCoocs)  
           end
-          ##############LOG DIST ############
           
-          #jaccard
-          #weight = Float(numCoocs) / ( Float(ngramPositions[pw['word']].size) + Float(ngramPositions[pw2['word']].size) ) / 100
+          #USING TextRank style edge weighting : if weighting edges simply by num coocs - not taking into account distance of co-occurrence
+          if textRankStyleEdgeWeighting and false #for now not forseeing using this, only for comparison later on
+            #straight num cooks
+            weight = Float(numCoocs) / 100
+          end
           
-          #straight num cooks
-          #weight = Float(numCoocs) / 100
-          
-          #USING TOPIC RANK DIST
-          if doTopicRankDist 
+          #USING TOPIC RANK DIST EDGE WEIGHTING
+          if doTopicRankDist and false #for now not forseeing using this, only for comparison later on
             #take average
             weight =  Float(topicRankDist) / Float(numTopicRankDists)
           end
@@ -520,19 +517,12 @@ class GraphRank::Keywords < GraphRank::TextRank
         end
         
 
-
-        #logFile.puts(" edge beween #{pw["word"]} -> #{pw2["word"]}, weight = #{weight}")
         #add edge to graph
         if weight > 0  
-          #use constant weight
-          #@ranking.add(pw["word"], pw2["word"], 1.0)
-          
-        
+
           if false and  weight > 1
             weight = 1
           end
-          
-          
           
           #Not adding initial word weights, for measurement purposes of effectiveness of feature
           @ranking.add(pw["word"], pw2["word"], weight * (pw['weight']*pw2['weight']))
@@ -543,10 +533,22 @@ class GraphRank::Keywords < GraphRank::TextRank
       end
     end
 
-    logFile.puts("textRerank graph = #{@ranking.printGraph}")
+    #add personalized pageRank edges
+    #each edge goes from a regular node a to node in a passed in ppr vector
+    #it is generally assumed that terms in the ppr are a subset of those in the phraseWeights (which are all the word/wight tuples the graph will be built out of)
+    #therefore check before adding nodes from ppr vector to make sure they exist in the phraseWeights, the term only
+    #for each term in the ppr vector then, add an edge from each of the graph nodes to it, the weight of this edge  
+
+    log("textRerank graph = #{@ranking.printGraph}")
     puts("just camed the graph, going to calculate ...")
     result = @ranking.calculate
     return {rankedTermsList: result, graph: @ranking}
+  end
+
+  def log msg
+    if @logFile
+      @logFile.puts(msg)
+    end
   end
   
   # Build the co-occurence graph for an n-gram.
