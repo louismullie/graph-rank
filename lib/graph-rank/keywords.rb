@@ -408,9 +408,11 @@ class GraphRank::Keywords < GraphRank::TextRank
 
     @logFile = options['logFile']
     windowSize = options['windowSize'] || 1500
+    pprVector = options['pprVector'] || []
 
-    textRankStyleEdgeWeighting = options['textRankStyleEdgeWeighting'] || false
-    doTopicRankDist = options['doTopicRankDist'] || false
+    #only of of these should be true
+    textRankStyleEdgeWeighting = false
+    doTopicRankDist = false
     doLogDist = true
 
     for pw in phraseWeights
@@ -517,7 +519,7 @@ class GraphRank::Keywords < GraphRank::TextRank
         end
         
 
-        #add edge to graph
+        # V add edge to graph
         if weight > 0  
 
           if false and  weight > 1
@@ -528,16 +530,26 @@ class GraphRank::Keywords < GraphRank::TextRank
           @ranking.add(pw["word"], pw2["word"], weight * (pw['weight']*pw2['weight']))
 
         end
-        #add edge to graph
+        # ^ add edge to graph
         
       end
     end
 
     #add personalized pageRank edges
+    #note: pprVector is execpted to be of format [{"word" => "someWord", "weight" => 0.56}, ...]
     #each edge goes from a regular node a to node in a passed in ppr vector
     #it is generally assumed that terms in the ppr are a subset of those in the phraseWeights (which are all the word/wight tuples the graph will be built out of)
     #therefore check before adding nodes from ppr vector to make sure they exist in the phraseWeights, the term only
     #for each term in the ppr vector then, add an edge from each of the graph nodes to it, the weight of this edge  
+    # V Personalized PageRank - create edges from each node to nodes in the personalized page rank vector
+    if not pprVector.empty?
+      pprVector.each do |termWeightTuple|
+        for pw in phraseWeights
+          @ranking.add(pw['word'], termWeightTuple['word'], termWeightTuple['weight'])
+        end
+      end
+    end
+    # ^ Personalized PageRank - create edges from each node to nodes in the personalized page rank vector
 
     log("textRerank graph = #{@ranking.printGraph}")
     puts("just camed the graph, going to calculate ...")

@@ -38,18 +38,29 @@ class GraphRank::PageRank
     if not @allowSelfEdges
       return false if source == dest
     end
+
+
     @outlinks[source] ||= 0.0
     @graph[dest] ||= []
+
+    if weight == 0
+      puts("info - ADDING EDGE WITH ZERO WEIGHT - FIX ME TODO ")
+      #return false
+    end 
     
     
-    #avoid establishing link if it already exists
+    #avoid establishing link if it already exists 
+    #note: the @graph maps a value (a destination node) to an array () all its sources )
     if @graph[dest].include? source
         puts("in page_rank.add link already exists between #{source} and #{dest}")
+        
+        #TODO increase weight according to personlized pageRank vector
+        @weights[source][dest] += weight
         return true
     end
     
     @graph[dest] << source
-    @outlinks[source] += 1.0 #as long as we are doing normalizeEdgeWeight (which is set to true by default) we don't need this eighter so if there is ever a CLEAN UP consider deleting this
+    @outlinks[source] += 1.0 #keeps track of numebr of outlinks for a node #as long as we are doing normalizeEdgeWeight (which is set to true by default) we don't need this eighter  so if there is ever a CLEAN UP consider deleting this
     @nodes[source] = sourcePriorWeight #0.15
     @nodes[dest] = destPriorWeight # 0.15
     @weights[source] ||= {}
@@ -57,8 +68,8 @@ class GraphRank::PageRank
   end
   
   
-  #ensures that all nodes' outgoing edge weights sum to 1
-  def normalizeNodeEdgeWeights
+  #ensures that all nodes' outgoing edge weights sum to 1 for all nodes in graph
+  def normalizeEdgeWeights
     @weights.each do |source, destinatins|
       weightsSum = 0.0
       
@@ -84,8 +95,9 @@ class GraphRank::PageRank
     #flag: if set to true, a node's edge weights are divided by the sum of its edge weights
     @normalizeEdgeWeight = true
     if true
-      puts("NORMALIZING EDGE WEIGHTS")
-      normalizeNodeEdgeWeights
+      puts("NORMALIZINGc EDGE WEIGHTS")
+      normalizeEdgeWeights
+      puts("DONE NORMALIZINGc EDGE WEIGHTS")
     end
     
     
