@@ -546,7 +546,7 @@ class GraphRank::Keywords < GraphRank::TextRank
     # V Personalized PageRank - create edges from each node to nodes in the personalized page rank vector
     if true
       puts("pprVector = #{pprVector}")
-    end
+    end 
     if not pprVector.empty?
       pprVector.each do |termWeightTuple|
         for pw in phraseWeights
