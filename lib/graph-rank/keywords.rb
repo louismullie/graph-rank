@@ -402,13 +402,15 @@ class GraphRank::Keywords < GraphRank::TextRank
   #input is an array consisting of phrases and their weights [{"word" => phrase, "weight" => itsWeight}]
   #this method build a graph that will be used to rerank them. termFreq and idf arguments passed in determine the weighting scheme (if one nil the other is used, if both not nil tf.idf is used)
   #option one: place links between terms that have one word in common
-  def build_rerank_graph phraseWeights,  ngramPositions, options
+  def buildnrun_rerank_graph phraseWeights,  ngramPositions, options
     puts("in build_rerenk_graph. working on personalized pagerank branch")
     
 
     @logFile = options['logFile']
     windowSize = options['windowSize'] || 1500
     pprVector = options['pprVector'] || []
+
+    puts("in buildnrun_rerank_graph - pprVector = #{pprVector}")f
 
     #only of of these should be true
     textRankStyleEdgeWeighting = false
@@ -542,17 +544,28 @@ class GraphRank::Keywords < GraphRank::TextRank
     #therefore check before adding nodes from ppr vector to make sure they exist in the phraseWeights, the term only
     #for each term in the ppr vector then, add an edge from each of the graph nodes to it, the weight of this edge  
     # V Personalized PageRank - create edges from each node to nodes in the personalized page rank vector
+    if true
+      puts("pprVector = #{pprVector}")
+    end
     if not pprVector.empty?
       pprVector.each do |termWeightTuple|
         for pw in phraseWeights
+          if pw['weight'] <= 0 or termWeightTuple['weight'] <=0 
+            next
+          end
           @ranking.add(pw['word'], termWeightTuple['word'], termWeightTuple['weight'])
         end
       end
     end
     # ^ Personalized PageRank - create edges from each node to nodes in the personalized page rank vector
 
-    log("textRerank graph = #{@ranking.printGraph}")
-    puts("just camed the graph, going to calculate ...")
+    if false
+      log("--------------")
+      log("textRerank graph = #{@ranking.graph.to_s}")
+      log("--------------")
+      puts("just built the graph in buildnrun_rerank_graph, going to calculate ...")
+    end
+
     result = @ranking.calculate
     return {rankedTermsList: result, graph: @ranking}
   end

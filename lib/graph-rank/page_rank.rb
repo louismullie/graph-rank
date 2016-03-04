@@ -28,7 +28,7 @@ class GraphRank::PageRank
     end
   end
 
-  # Add two nodes and edge weight between them  to the graph. with optional initla weights for the nodes
+  # Add two nodes and edge weight between them  to the graph. If edge already exists, add to the weight. with optional initla weights for the nodes
   def add(source, dest, weight=1.0, sourcePriorWeight = 0.15, destPriorWeight = 0.15)
     
     #flag
@@ -52,12 +52,11 @@ class GraphRank::PageRank
     #avoid establishing link if it already exists 
     #note: the @graph maps a value (a destination node) to an array () all its sources )
     if @graph[dest].include? source
-        puts("in page_rank.add link already exists between #{source} and #{dest}")
-        
-        #TODO increase weight according to personlized pageRank vector
+        #puts("in page_rank.add link already exists between #{source} and #{dest}")        
         @weights[source][dest] += weight
         return true
     end
+
     
     @graph[dest] << source
     @outlinks[source] += 1.0 #keeps track of numebr of outlinks for a node #as long as we are doing normalizeEdgeWeight (which is set to true by default) we don't need this eighter  so if there is ever a CLEAN UP consider deleting this
@@ -261,7 +260,7 @@ class GraphRank::PageRank
         
         self.graph[node_n] = Array.new
         self.graph[node_n] = otherGraph.graph[node_n]
-        #>>>> todo add weights from other graph to this graph
+        #add weights from other graph to this graph
         for nodePointingToNode_n_inOtherGraph in nodesPointingToNoden_n
           if not self.weights.has_key? nodePointingToNode_n_inOtherGraph
             self.weights[nodePointingToNode_n_inOtherGraph] =  Hash.new
@@ -315,15 +314,34 @@ class GraphRank::PageRank
       new_nodes[node] = (1-@damping/
       @nodes.size) + @damping * score
     end
-    new_nodes
+
+    if false
+      #for debug
+      puts("--------------")
+      puts("graph = #{@graph.to_s}")
+      puts("-------")
+      puts("nodes = #{@nodes.to_s}")
+      puts("-------")
+      puts("new_nodes = #{new_nodes.to_s}")
+      puts("-------")
+      puts("@nodes.size  = #{@nodes.size}")
+      puts("-------")
+      puts("new_nodes.size  = #{new_nodes.size}")
+      puts("--------------")
+    end
+    
+
+    return new_nodes
   end
 
   # Check for convergence.
   def convergence(current)
     diff = {}
+    
+
     @nodes.each do |k,v|
-      #puts("k = #{k}")      
-      diff[k] = current[k] - @nodes[k]
+
+      diff[k] = current[k] - @nodes[k] #if you are getting an error here that a current doesn't have k, it could be because you have nodes that are only sources in the graph and never destinations, these nodes will drop in one iteration (see *) causing previous @nodes and current_nodes to have different keys (*because @graph.each do |node(<=htis node will only be nodes that are destination to something, that's the way graph is built) ,links|)
     end
     total = 0.0
     diff.each { |k,v| total += diff[k] * v }
