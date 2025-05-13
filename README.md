@@ -1,14 +1,14 @@
-###About
+## graph-rank
 
 This gem implements a PageRank class and a class that allows to perform keyword ranking using the TextRank algorithm. Both were ported from the [PHP Implementation](https://github.com/crodas/textrank) by @crodas.
 
-###Install
+### Install
 
 ```
 gem install graph-rank
 ```
 
-###Usage
+### Usage
 
 **TextRank**
 
